@@ -22,6 +22,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Compute game pace features")
     parser.add_argument("--db-path", default="data/nba_stats.db")
     parser.add_argument("--season", default="2024-25")
+    parser.add_argument("--seasons", nargs="+")
+    parser.add_argument("--all-seasons", action="store_true")
     parser.add_argument("--force", action="store_true")
     return parser.parse_args()
 
@@ -40,33 +42,52 @@ def main() -> None:
     conn = connect(PROJECT_ROOT / args.db_path)
     create_referee_tables(conn)
     client = NBAStatsClient(cache_dir=PROJECT_ROOT / "data" / "cache", min_request_interval=0.1)
-    game_ids = _l2m_game_ids(conn, args.season)
-    logger.info("Computing pace features for %s L2M games", len(game_ids))
+    seasons = _selected_seasons(conn, args)
 
     inserted = 0
     failures = 0
-    for index, game_id in enumerate(game_ids, start=1):
-        if not args.force and _has_features(conn, game_id):
-            continue
-        try:
-            page_props = client.get_nba_game_page_data(game_id)
-            row = compute_game_pace_features(page_props, game_id, args.season)
-            _insert_row(conn, row)
-            inserted += 1
-        except Exception as exc:
-            failures += 1
-            logger.warning("Pace features failed for %s: %s", game_id, exc)
+    for season in seasons:
+        game_ids = _l2m_game_ids(conn, season)
+        logger.info("Computing pace features for %s L2M games in %s", len(game_ids), season)
+        for index, game_id in enumerate(game_ids, start=1):
+            if not args.force and _has_features(conn, game_id):
+                continue
+            try:
+                page_props = client.get_nba_game_page_data(game_id)
+                row = compute_game_pace_features(page_props, game_id, season)
+                _insert_row(conn, row)
+                inserted += 1
+            except Exception as exc:
+                failures += 1
+                logger.warning("Pace features failed for %s: %s", game_id, exc)
 
-        if index % 50 == 0 or index == len(game_ids):
-            logger.info(
-                "Progress %s/%s inserted=%s failures=%s",
-                index,
-                len(game_ids),
-                inserted,
-                failures,
-            )
+            if index % 50 == 0 or index == len(game_ids):
+                logger.info(
+                    "Progress %s %s/%s inserted=%s failures=%s",
+                    season,
+                    index,
+                    len(game_ids),
+                    inserted,
+                    failures,
+                )
 
     logger.info("Done. Inserted/updated %s pace feature rows.", inserted)
+
+
+def _selected_seasons(conn, args: argparse.Namespace) -> list[str]:
+    if args.all_seasons:
+        rows = conn.execute(
+            """
+            SELECT DISTINCT season
+            FROM l2m_reports
+            WHERE has_report = 1
+            ORDER BY season
+            """
+        ).fetchall()
+        return [row["season"] for row in rows]
+    if args.seasons:
+        return args.seasons
+    return [args.season]
 
 
 def _l2m_game_ids(conn, season: str) -> list[str]:

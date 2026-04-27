@@ -17,6 +17,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from referee_fatigue.arena_locations import ARENA_LOCATIONS_BY_TEAM_ID
 from referee_fatigue.db import connect, create_referee_tables
+from referee_fatigue.taxonomy import call_detail, call_family, classify
 
 
 @dataclass
@@ -95,6 +96,10 @@ def add_context_columns(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
     out["call_family"] = out["call_type"].map(call_family)
     out["call_detail"] = out["call_type"].map(call_detail)
+    out["taxonomy_category"] = out.apply(
+        lambda row: classify(row["call_type"], row["review_decision"]),
+        axis=1,
+    )
     out["decision_kind"] = out["review_decision"].map(
         {"CC": "call", "IC": "call", "CNC": "non_call", "INC": "non_call"}
     )
@@ -111,6 +116,7 @@ def add_context_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 def build_report(df: pd.DataFrame) -> str:
     call_family_summary = summarize_context(df, "call_family", min_n=50)
+    taxonomy_summary = summarize_context(df, "taxonomy_category", min_n=20)
     call_type_summary = summarize_context(df, "call_type", min_n=20)
     decision_summary = summarize_context(df, "decision_kind", min_n=20)
     period_summary = summarize_context(df, "period_bucket", min_n=20)
@@ -133,6 +139,10 @@ def build_report(df: pd.DataFrame) -> str:
         "## Major Call Families",
         "",
         dataframe_to_markdown(call_family_summary),
+        "",
+        "## Structural Taxonomy",
+        "",
+        dataframe_to_markdown(taxonomy_summary),
         "",
         "## Highest-Risk Detailed Call Types",
         "",
@@ -247,18 +257,6 @@ def fit_factor(
         p_value=float(result.pvalues[factor]),
         odds_ratio=math.exp(float(result.params[factor])),
     )
-
-
-def call_family(value: str | None) -> str:
-    if not value:
-        return "Unknown"
-    return value.split(":", 1)[0].strip()
-
-
-def call_detail(value: str | None) -> str:
-    if not value or ":" not in value:
-        return "Unknown"
-    return value.split(":", 1)[1].strip()
 
 
 def clock_seconds(value: str | None) -> float | None:

@@ -1,0 +1,261 @@
+# Sloan Research Handoff
+
+This project started as a referee fatigue/travel investigation and pivoted after the data did not support that framing. The strongest current direction is an event-context model of NBA late-game officiating risk.
+
+## Research North Star
+
+**Goal:** identify what factors lead to NBA late-game officiating errors, especially in decisions that require continuous off-ball monitoring, timing/count judgment, or possession-boundary adjudication, rather than ordinary contact fouls.
+
+Working thesis:
+
+> NBA late-game officiating errors are structurally predictable from decision context. Errors concentrate in timing/count, possession-boundary, and off-ball monitoring decisions rather than being broadly driven by referee fatigue, travel, or game pace.
+
+Possible paper title:
+
+> Where NBA Referees Miss: Structural Error Risk in Late-Game Officiating Decisions
+
+## Current Evidence
+
+The current dataset is the JSON-era NBA Last Two Minute report archive from 2018-19 through 2024-25. Earlier centralized archive pages are unavailable or PDF-only in the current collection path.
+
+Key results:
+
+- L2M reports analyzed: 2,514
+- L2M events analyzed: 51,384
+- Incorrect decisions: 3,214
+- Baseline event error rate: 6.3%
+- Rolling season holdouts evaluated: 6
+- Mean top-10% predicted-risk lift over baseline: about 3.5x
+- 2024-25 holdout: train on 2018-19 through 2023-24, test on 2024-25; top-decile lift about 4.0x
+
+The strongest predictors are event-structure features:
+
+- `Foul: Defense 3 Second`
+- timing/count monitoring
+- `Turnover: Traveling`
+- `Stoppage: Out-of-Bounds`
+- violation family
+- 61-90 second clock bucket
+- non-call vs call
+- possession-boundary monitoring
+
+The fatigue/schedule angle has not shown support so far:
+
+- Back-to-back rest: no meaningful L2M relationship.
+- Travel miles: no meaningful L2M relationship.
+- Time-zone crossings: no meaningful L2M relationship.
+- Pace/action density: no meaningful L2M relationship.
+
+Baseline model comparison adds an important nuance:
+
+- Raw `call_type` is the strongest compact predictor.
+- The frozen structural taxonomy is still valuable for interpretation and paper narrative.
+- The best public claim is not that the five-category taxonomy captures everything, but that high-risk raw call types share attention-load properties: timing/count state, possession/boundary state, and continuous off-ball monitoring.
+
+## What Not To Overclaim
+
+Do **not** claim that referees miss 60% of all defensive three-second violations. The L2M data only includes reviewed calls and notable non-calls in qualifying close-game windows.
+
+Safer claim:
+
+> Among L2M-reviewed late-game events, certain rule categories are disproportionately likely to be judged incorrect by the league.
+
+Also avoid claiming individual referees are predictably bad from this sample. The current signal is primarily decision-context risk, not referee identity.
+
+## Current Reports
+
+- `results/call_context_l2m_report.md`
+  - Context taxonomy and error-rate distribution.
+- `results/post_event_risk_model_report.md`
+  - Rolling season holdout post-event risk ranking model.
+- `results/post_event_high_risk_events.csv`
+  - Highest-risk scored events for inspection.
+- `results/model_baselines_report.md`
+  - Rolling holdout comparison of baseline, call type, taxonomy, clock, and context/workload variants.
+- `results/sori_event_scores.csv`
+  - Event-level Structural Officiating Risk Index scores.
+- `results/sori_game_scores.csv`
+  - Game-level SORI summaries.
+- `results/sori_category_map.md`
+  - Category-by-clock observed error-rate map.
+- `results/l2m_error_workload_report.md`
+  - Rest/travel/time-zone tests.
+- `results/pace_l2m_error_report.md`
+  - Pace and late-game load tests.
+- `results/h1b_challenge_overturn_report.md`
+  - Original challenge-overturn fatigue screen.
+- `docs/CRITIQUE_RESPONSE_GUIDE.md`
+  - Claim boundaries and response guidance for public/Sloan feedback.
+
+## Best Next Steps
+
+### 1. Close The Pre-2018 Data Question
+
+The current code collects centralized JSON-era archive links from 2018-19 onward. The 2015-16 and 2016-17 centralized archive URLs return 404, and 2017-18 appears PDF-only in the NBA archive page.
+
+Why this matters:
+
+- A Sloan-quality paper needs a clean inclusion/exclusion rationale.
+- Parsing 2017-18 PDFs may add one more season, but the current JSON-era dataset is already large enough for the main result.
+
+Implementation notes:
+
+- Either build a PDF parser for 2017-18 and earlier single-report PDFs, or explicitly define the dataset as the 2018-19 to 2024-25 JSON-era sample.
+- Do not mix PDF-derived rows into the analysis without validating that fields match JSON-derived rows.
+
+### 2. Freeze A Defensible Taxonomy
+
+Before additional model iteration, define a fixed taxonomy in code and documentation.
+
+Recommended top-level categories:
+
+- `ordinary_contact_foul`
+  - Shooting, personal, loose-ball, offensive fouls near the primary action.
+- `continuous_off_ball_monitoring`
+  - Defensive three seconds, away-from-play fouls, off-ball screens, loose-ball positioning.
+- `timing_count_judgment`
+  - Three seconds, five seconds, eight seconds, 24 seconds, lane violations.
+- `possession_boundary_adjudication`
+  - Out of bounds, last touch, traveling, stepped out of bounds, backcourt, possession-boundary turnovers.
+- `stoppage_replay_administration`
+  - Inadvertent whistle, timeout/stoppage, replay/support rulings.
+
+Why this matters:
+
+- The taxonomy must look pre-specified, not mined after seeing results.
+- The paper should explain why each category is cognitively distinct.
+
+### 3. Validate By Season
+
+Use season-level holdouts:
+
+- Train on seasons up to year N.
+- Test on season N+1.
+- Report top-decile lift and ROC AUC by season.
+
+The key Sloan chart should be:
+
+> Top-decile structural-risk events are X times more likely to be incorrect out of sample.
+
+Benchmarks to include:
+
+- Baseline error rate.
+- Call type only.
+- Call vs non-call only.
+- Taxonomy only.
+- Taxonomy + clock context.
+- Taxonomy + referee/workload variables.
+
+The current evidence suggests context-only will perform nearly as well as the fuller model. That is a strength, not a weakness.
+
+### 4. Add A Practical Risk Index
+
+Turn the model into a usable metric:
+
+> Structural Officiating Risk Index (SORI)
+
+Possible outputs:
+
+- Event-level risk score: probability an L2M-reviewed decision is incorrect.
+- Game-level structural risk: average/max expected risk across events in the last two minutes.
+- Category-level risk map: which rule classes create the most audit risk.
+
+This gives the paper an applied contribution beyond prediction.
+
+### 5. Study Challenge Alignment
+
+Questions:
+
+- Do coach challenges target the same categories the L2M model identifies as structurally high risk?
+- Are high-risk L2M categories under-challenged because they are hard to see live or not challengeable?
+- Are overturned calls concentrated in possession-boundary categories while L2M incorrect non-calls concentrate elsewhere?
+
+This can connect L2M review, replay/challenges, and officiating process design.
+
+This is now the highest-value next analysis because it directly answers a likely critique of the coaching-edge section: the project has shown structural L2M risk, but has not yet shown that coach challenge behavior is miscalibrated or that high-risk challenge classes overturn more often.
+
+### 6. Add Game Context
+
+High-value additions:
+
+- score margin at event time
+- tied vs one-possession state
+- trailing team possession
+- final 30 seconds vs 31-60 vs 61-90 vs 91-120
+- overtime
+- rebound/scramble indicators from comments or play-by-play action types
+- drive/shot/rebound/turnover sequence context
+
+These should be treated as event-context variables, not referee-fatigue variables.
+
+### 7. Keep Fatigue As A Negative Result
+
+The project started with fatigue, but current tests suggest it is not the main effect.
+
+Use it as a useful contrast:
+
+> Broad schedule-load variables do not explain late-game error risk nearly as well as structural decision context.
+
+That makes the paper more credible because it shows the analysis rejected the initial hypothesis.
+
+## Suggested Paper Structure
+
+1. Introduction
+   - NBA officiating transparency via L2M reports.
+   - Problem: aggregate accuracy hides structurally hard decision classes.
+
+2. Data
+   - L2M reports, calls/non-calls, reviewed event categories.
+   - Coach challenges as secondary validation.
+   - Referee schedule/travel and pace features as rejected/secondary hypotheses.
+
+3. Taxonomy
+   - Define structural monitoring categories.
+   - Explain cognitive demands: continuous state tracking, divided attention, boundary ambiguity.
+
+4. Descriptive Results
+   - Error rates by category.
+   - Non-call vs call asymmetry.
+   - Clock/OT context.
+
+5. Predictive Model
+   - Held-out game/season split.
+   - Risk deciles and lift over baseline.
+   - Feature interpretation.
+
+6. Robustness
+   - Season holdouts.
+   - Baselines.
+   - Exclude rare categories.
+   - Compare with referee/workload variables.
+
+7. Practical Implications
+   - Replay support.
+   - Training emphasis.
+   - Rule/process design for high-risk categories.
+   - Potential automated timing/count support.
+
+8. Limitations
+   - L2M selection bias.
+   - Not a complete sample of all officiating decisions.
+   - League audit criteria may vary.
+   - Some event context inferred from text.
+
+## Immediate Developer Checklist
+
+1. Add multi-season L2M archive discovery.
+2. Freeze taxonomy in a dedicated module, not inside one analysis script.
+3. Rebuild `post_event_risk_model.py` to support season holdout mode.
+4. Produce a season-by-season lift table.
+5. Add simple baselines and compare model variants.
+6. Add a `SORI` score export for all L2M events.
+7. Write a short methods memo describing exactly what the model can and cannot claim.
+
+## Current Next Developer Checklist
+
+1. Run a challenge-alignment analysis by structural taxonomy and raw call type.
+2. Add robustness checks excluding `Foul: Defense 3 Second`, `Turnover: Traveling`, and rare call types.
+3. Decide whether to parse pre-2018 PDFs or formally define the sample as JSON-era only.
+4. Manually label 100-200 events for attention-load properties to support the conceptual thesis beyond NBA call labels.
+5. Tighten public-facing language using `docs/CRITIQUE_RESPONSE_GUIDE.md`.
+

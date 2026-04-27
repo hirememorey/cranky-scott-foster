@@ -229,6 +229,43 @@ def create_referee_tables(conn: sqlite3.Connection) -> None:
         ON game_pace_features(season)
         """
     )
+
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS l2m_event_context (
+            game_id TEXT NOT NULL,
+            event_index INTEGER NOT NULL,
+            season TEXT NOT NULL,
+            period INTEGER,
+            game_clock TEXT,
+            matched_action_number INTEGER,
+            matched_clock_delta_seconds REAL,
+            score_home INTEGER,
+            score_away INTEGER,
+            score_margin INTEGER,
+            score_margin_abs INTEGER,
+            tied_game INTEGER NOT NULL,
+            one_possession INTEGER NOT NULL,
+            trailing_team TEXT,
+            action_team TEXT,
+            trailing_team_possession INTEGER,
+            final_30_seconds INTEGER NOT NULL,
+            overtime INTEGER NOT NULL,
+            rebound_scramble_indicator INTEGER NOT NULL,
+            sequence_context TEXT,
+            action_type TEXT,
+            action_subtype TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (game_id, event_index)
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_l2m_event_context_season
+        ON l2m_event_context(season)
+        """
+    )
     conn.commit()
 
 
