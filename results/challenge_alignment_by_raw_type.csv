@@ -1,20 +1,20 @@
 challenge_raw_type,taxonomy_category,challenges,overturned,overturn_rate,challenge_share,call_detail
-Rebound,possession_boundary_adjudication,1438,1341,0.9325452016689847,0.31821199380393894,Unknown
-Foul: Shooting,ordinary_contact_foul,1011,229,0.2265084075173096,0.22372206240318654,Shooting
+Rebound,focal_continuous,1438,1341,0.9325452016689847,0.31821199380393894,Unknown
+Foul: Shooting,focal_discrete,1011,229,0.2265084075173096,0.22372206240318654,Shooting
 Unknown,unknown_or_unmapped,405,380,0.9382716049382716,0.08962159769860589,Unknown
-Foul: Personal,ordinary_contact_foul,376,167,0.4441489361702128,0.0832042487275946,Personal
-Foul: Offensive,ordinary_contact_foul,300,181,0.6033333333333334,0.066386368665634,Offensive
-Foul: Offensive Charge,ordinary_contact_foul,221,96,0.4343891402714932,0.04890462491701704,Offensive Charge
-Turnover: Out of Bounds Lost Ball Turnover,possession_boundary_adjudication,208,177,0.8509615384615384,0.04602788227483957,Out of Bounds Lost Ball Turnover
-Turnover: Out of Bounds - Bad Pass Turnover,possession_boundary_adjudication,144,124,0.8611111111111112,0.03186545695950432,Out of Bounds - Bad Pass Turnover
-Foul: Loose Ball,continuous_off_ball_monitoring,117,58,0.49572649572649574,0.025890683779597256,Loose Ball
-Turnover: Lost Ball,possession_boundary_adjudication,87,87,1.0,0.01925204691303386,Lost Ball
-Turnover: Offensive Foul Turnover,ordinary_contact_foul,72,68,0.9444444444444444,0.01593272847975216,Offensive Foul Turnover
-Turnover: Bad Pass,possession_boundary_adjudication,43,40,0.9302325581395349,0.009515379508740872,Bad Pass
-Violation: Defensive Goaltending,possession_boundary_adjudication,17,5,0.29411764705882354,0.003761894224385926,Defensive Goaltending
-Turnover: 24 Second Violation,timing_count_judgment,13,11,0.8461538461538461,0.002876742642177473,24 Second Violation
-Foul: Technical,ordinary_contact_foul,11,10,0.9090909090909091,0.0024341668510732464,Technical
-Turnover: Stepped out of Bounds,possession_boundary_adjudication,11,5,0.45454545454545453,0.0024341668510732464,Stepped out of Bounds
-Stoppage: Jump Ball,stoppage_replay_administration,10,9,0.9,0.002212878955521133,Jump Ball
-Foul: Personal Take,ordinary_contact_foul,8,6,0.75,0.0017703031644169065,Personal Take
-Turnover: Offensive Goaltending,possession_boundary_adjudication,8,3,0.375,0.0017703031644169065,Offensive Goaltending
+Foul: Personal,focal_discrete,376,167,0.4441489361702128,0.0832042487275946,Personal
+Foul: Offensive,focal_discrete,300,181,0.6033333333333334,0.066386368665634,Offensive
+Foul: Offensive Charge,focal_discrete,221,96,0.4343891402714932,0.04890462491701704,Offensive Charge
+Turnover: Out of Bounds Lost Ball Turnover,focal_continuous,208,177,0.8509615384615384,0.04602788227483957,Out of Bounds Lost Ball Turnover
+Turnover: Out of Bounds - Bad Pass Turnover,focal_continuous,144,124,0.8611111111111112,0.03186545695950432,Out of Bounds - Bad Pass Turnover
+Foul: Loose Ball,ambient_continuous,117,58,0.49572649572649574,0.025890683779597256,Loose Ball
+Turnover: Lost Ball,focal_continuous,87,87,1.0,0.01925204691303386,Lost Ball
+Turnover: Offensive Foul Turnover,focal_discrete,72,68,0.9444444444444444,0.01593272847975216,Offensive Foul Turnover
+Turnover: Bad Pass,focal_continuous,43,40,0.9302325581395349,0.009515379508740872,Bad Pass
+Violation: Defensive Goaltending,focal_continuous,17,5,0.29411764705882354,0.003761894224385926,Defensive Goaltending
+Turnover: 24 Second Violation,temporal_discrete,13,11,0.8461538461538461,0.002876742642177473,24 Second Violation
+Foul: Technical,administrative_process,11,10,0.9090909090909091,0.0024341668510732464,Technical
+Turnover: Stepped out of Bounds,focal_continuous,11,5,0.45454545454545453,0.0024341668510732464,Stepped out of Bounds
+Stoppage: Jump Ball,administrative_process,10,9,0.9,0.002212878955521133,Jump Ball
+Foul: Personal Take,focal_discrete,8,6,0.75,0.0017703031644169065,Personal Take
+Turnover: Offensive Goaltending,focal_continuous,8,3,0.375,0.0017703031644169065,Offensive Goaltending

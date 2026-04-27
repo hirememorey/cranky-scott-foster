@@ -24,6 +24,7 @@ from referee_fatigue.game_ids import (
 from referee_fatigue.nba_stats_client import NBAStatsClient
 from referee_fatigue.taxonomy import (
     CATEGORY_DEFINITIONS,
+    ORDINARY_CONTACT_FOUL,
     POSSESSION_BOUNDARY_ADJUDICATION,
     TIMING_COUNT_JUDGMENT,
     call_detail,
@@ -831,7 +832,11 @@ def report_coverage_columns(df: pd.DataFrame) -> pd.DataFrame:
 def report_season_taxonomy_columns(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return df
-    focus = df[df["taxonomy_category"].isin([POSSESSION_BOUNDARY_ADJUDICATION, "ordinary_contact_foul", TIMING_COUNT_JUDGMENT])].copy()
+    focus = df[
+        df["taxonomy_category"].isin(
+            [POSSESSION_BOUNDARY_ADJUDICATION, ORDINARY_CONTACT_FOUL, TIMING_COUNT_JUDGMENT]
+        )
+    ].copy()
     columns = [
         "season",
         "taxonomy_category",
@@ -897,7 +902,7 @@ def interpretation(taxonomy_summary: pd.DataFrame) -> str:
     possession = known[
         known["taxonomy_category"] == POSSESSION_BOUNDARY_ADJUDICATION
     ]
-    ordinary = known[known["taxonomy_category"] == "ordinary_contact_foul"]
+    ordinary = known[known["taxonomy_category"] == ORDINARY_CONTACT_FOUL]
     unknown = taxonomy_summary[
         taxonomy_summary["taxonomy_category"] == UNKNOWN_CATEGORY
     ]

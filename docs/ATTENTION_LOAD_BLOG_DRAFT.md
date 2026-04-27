@@ -4,11 +4,16 @@
 
 NBA officiating mistakes are not random. They cluster around decisions that ask humans to track too much at once.
 
-We analyzed more than 51,000 NBA Last Two Minute report events from the 2018-19 through 2024-25 seasons. The league marked about 6% of those reviewed decisions as incorrect. But that average hides a big pattern.
+We analyzed **51,130** NBA Last Two Minute report events from the 2018-19 through 2024-25 seasons. The league marked about **6.3%** of those reviewed decisions as incorrect. But that average hides a big pattern.
 
-Ordinary contact fouls were incorrect about 4% of the time. Timing and count decisions were incorrect about 20% of the time. Possession and boundary decisions were incorrect about 16% of the time. Continuous off-ball monitoring decisions were incorrect about 10% of the time.
+For exposition we group decisions into four intuitive buckets; in the research code these map to a **pre-specified taxonomy** grounded in **Wickens-style multiple resource theory** (focal vs. ambient monitoring, discrete vs. continuous state), not tuned to error rates:
 
-The strongest finding is not that NBA referees are bad. It is that different calls place different loads on human attention, and those risks are predictable enough to design around.
+- **Ordinary contact fouls** (primary-action fouls): incorrect about **4%** of the time.
+- **Timing and count** decisions: incorrect about **20%** of the time.
+- **Possession, boundary, and gather** judgments (traveling, out of bounds, similar): incorrect about **16%** of the time.
+- **Continuous off-ball monitoring** (e.g., lane timing, many off-ball fouls): incorrect about **10%** of the time.
+
+The strongest finding is not that NBA referees are bad. It is that different calls place different demands on attention and parallel tracking, and those risks are predictable enough to design around—while staying clear that we are **not** measuring cognitive load directly.
 
 ## Why This Makes Sense
 
@@ -26,9 +31,11 @@ These are not just "judgment calls." They are attention-load calls. They require
 
 ## What The Model Found
 
-In the strictest current test, we trained on prior seasons and tested on the next season. Across six future-season holdouts, the top 10% highest-risk events were about 3.5 times more likely to be ruled incorrect than the average reviewed event.
+In the strictest current test, we trained on prior seasons and tested on the next season. Across six future-season holdouts, the top 10% highest-risk events were about **3.5 times** more likely to be ruled incorrect than the average reviewed event.
 
-The model uses call type, structural category, game clock, period, call vs non-call, and related contextual features. The strongest predictors are call structure, not referee workload.
+The estimator is **L2-regularized logistic regression** on one-hot-encoded categoricals (including call type / family, MRT structural bucket, period and clock buckets, decision kind, score and possession proxies, sequence context) plus scaled numeric context; see `analysis/post_event_risk_model.py`. Rolling holdouts report **ROC AUC** roughly **0.66–0.73** by season (full table in `results/post_event_risk_model_report.md`). For a fixed **2024-25** holdout, the repo also writes **`results/model_coefficients.csv`** (coefficients and odds ratios) and **`results/model_calibration.csv`** (binned predicted vs. observed incorrect rates) for transparency.
+
+The strongest predictors are **call structure and context**, not referee workload proxies.
 
 The signal is not just one weird rule. It gets weaker when defensive three seconds and traveling are removed, but it does not disappear: in that stricter check, the top-risk decile still ran about 2.4 times baseline.
 
@@ -40,11 +47,13 @@ In plain English: the hard calls are partly predictable before we know whether t
 
 Coach challenges show that not all high-risk calls are equally usable by teams.
 
-Across 4,519 challenge events from the 2019-20 through 2024-25 seasons, possession and boundary plays were the clearest replay opportunity. They made up about 43% of challenges and were overturned about 91% of the time.
+Across **4,519** coach challenge events from the 2019-20 through 2024-25 seasons (full game, not L2M-only), **possession/boundary-style** plays were the clearest replay opportunity in our mapping: about **43%** of challenges and overturned about **91%** of the time.
 
-Ordinary contact fouls were challenged just as often, about 44% of the sample, but were overturned only about 38% of the time.
+**Ordinary contact** fouls were challenged about as often (~**44%**) but overturned only about **38%** of the time.
 
-Timing and count decisions are different. They are high-risk in Last Two Minute reports, but they were almost absent from the challenge sample. That suggests many of those mistakes are hard to see live, hard to challenge, or not cleanly packaged as replay opportunities.
+**Timing/count** decisions are different: high incorrect rates in L2M, but they were almost absent from the challenge sample. That pattern is consistent with mistakes that are hard to see live, hard to challenge, or not cleanly packaged as replay opportunities.
+
+**Selection caveat:** coaches choose what to challenge; high overturn rates on a category do not by themselves prove replay “fixes” that call type—they also reflect which disputes teams bother to mount.
 
 ## What This Means For Teams
 
@@ -77,12 +86,16 @@ Some errors are replay-solvable. Some are attention-design problems. Some are or
 
 ## What This Does Not Claim
 
-This analysis is based on NBA Last Two Minute reports, not every officiating decision in every game.
+This analysis is based on **NBA Last Two Minute (L2M) reports**, not every officiating decision in every game. L2M uses the league’s own review standard: among other things, the NBA requires **clear and conclusive video** to mark a play incorrectly officiated, and may bracket or treat differently events that depend heavily on **stopwatch, zoom, or other technical support**. That means category-level “error” rates mix **officiating difficulty** with **how the league grades each call family**—an important confound for any paper, not something this blog post can fully disentangle.
 
-The challenge sample is full-game, not just Last Two Minute plays. Coverage is strong for most seasons, but 2020-21 is partial in the current collection.
+The challenge sample is **full-game**, not L2M-only, so merging it with L2M is descriptive alignment, not a causal link. Coverage is strong for most seasons, but **2020-21** is partial in the current challenge collection.
 
-It does not show that individual referees are bad. It does not estimate the error rate of all NBA calls. It does not prove fatigue never matters.
+We do **not** observe cognitive load, eye tracking, or brain activity. Higher incorrect rates in some call families are **consistent with** attention-load and divided-attention stories, but **observational** alternatives remain: rule ambiguity, observability and camera geometry, harsher league grading for some play types, and different baselines for how “marginal” calls are.
+
+It does not show that individual referees are bad. It does not estimate the error rate of all NBA calls. Broad **fatigue / travel / pace** proxies did not explain much in our models; that is **not** the same as proving fatigue never matters in any form.
 
 The claim is narrower and, hopefully, more useful:
 
-> Among reviewed late-game NBA decisions, some rule contexts overload human attention more than others. Some of those risks are addressable by team challenge discipline, while others require better league-side support systems.
+> Among reviewed late-game NBA decisions, some rule contexts are disproportionately likely to be graded incorrect—and that pattern is stable enough across seasons to be useful for process design, challenge strategy, and honest limits on what replay can fix.
+
+For SSAC-style competition, this draft is still a **popular summary**, not a full paper: a submission would need formal literature review, methods detail, robustness to alternate taxonomies, explicit handling of L2M grading rules, and open replication artifacts (see `docs/CRITIQUE_RESPONSE_GUIDE.md` and `docs/SLOAN_RESEARCH_HANDOFF.md`).

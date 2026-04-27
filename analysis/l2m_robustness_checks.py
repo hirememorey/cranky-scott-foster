@@ -14,6 +14,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 sys.path.insert(0, str(PROJECT_ROOT / "analysis"))
 
 from referee_fatigue.db import connect, create_referee_tables
+from referee_fatigue.taxonomy import POSSESSION_BOUNDARY_ADJUDICATION, TIMING_COUNT_JUDGMENT
 
 import post_event_risk_model as risk
 
@@ -76,9 +77,9 @@ def scenario_datasets(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
             ~df["call_type"].isin(["Foul: Defense 3 Second", "Turnover: Traveling"])
         ].copy(),
         "exclude_rare_call_types_lt_100": df[~df["call_type"].isin(rare_call_types)].copy(),
-        "exclude_timing_count_judgment": df[df["monitoring_type"] != "timing_count_judgment"].copy(),
+        "exclude_timing_count_judgment": df[df["monitoring_type"] != TIMING_COUNT_JUDGMENT].copy(),
         "exclude_possession_boundary_adjudication": df[
-            df["monitoring_type"] != "possession_boundary_adjudication"
+            df["monitoring_type"] != POSSESSION_BOUNDARY_ADJUDICATION
         ].copy(),
     }
 

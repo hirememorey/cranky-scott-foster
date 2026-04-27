@@ -14,16 +14,11 @@ NBA officiating analytics experiments focused on identifying structural contexts
 
 ## Current Finding
 
-The strongest signal is not broad fatigue, travel, or pace. It is event structure:
+The strongest signal is not broad fatigue, travel, or pace. It is **event structure**, summarized in code with a **Wickens-style multiple-resource (MRT) taxonomy** (`docs/TAXONOMY.md`): timing/count–like decisions, boundary/gather–like decisions, off-ball spatial monitoring, vs. primary-action contact.
 
-- timing/count judgments
-- possession-boundary adjudication
-- selected violations and stoppages
-- non-calls compared with calls
+The post-event risk model ranks structurally high-risk L2M events well across seasons. In rolling season holdouts from 2018-19 through 2024-25, the top-10% risk bucket shows roughly a **3.5x** lift over baseline on average; see `results/post_event_risk_model_report.md` and **`results/model_coefficients.csv`** / **`results/model_calibration.csv`** for a documented logistic specification on the final season holdout.
 
-The post-event risk model ranks structurally high-risk L2M events well across seasons. In rolling season holdouts from 2018-19 through 2024-25, the top-10% risk bucket shows roughly a 3.5x lift over baseline on average.
-
-Challenge data adds a practical split: possession-boundary decisions are heavily challenged and overturned at high rates, while timing/count decisions remain high-risk in L2M but are rarely challenge targets. Robustness checks show the signal weakens after excluding defensive three seconds and traveling, but remains directionally present.
+Challenge data adds a practical split: possession/boundary-style decisions are heavily challenged and overturned at high rates, while timing/count decisions remain high-risk in L2M but are rarely challenge targets—read with **coach selection** caveats. Robustness checks show the signal weakens after excluding defensive three seconds and traveling, but remains directionally present.
 
 ## Research Direction
 

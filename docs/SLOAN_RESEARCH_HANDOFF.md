@@ -10,6 +10,10 @@ Working thesis:
 
 > NBA late-game officiating errors are structurally predictable from decision context. Errors concentrate in timing/count, possession-boundary, and off-ball monitoring decisions rather than being broadly driven by referee fatigue, travel, or game pace.
 
+The structural buckets are implemented as an **a priori**, **MRT-aligned** taxonomy in `src/referee_fatigue/taxonomy.py` (`focal_discrete`, `focal_continuous`, `ambient_continuous`, `temporal_discrete`, `administrative_process`). See `docs/TAXONOMY.md` for definitions and mapping from legacy report labels.
+
+**SSAC / competition angle:** the idea is competitive as a **novel framing** (design and attention load vs. bias economics) with **practical impact**, but a finalist-level submission still needs the methodological stack called out in `docs/CRITIQUE_RESPONSE_GUIDE.md` § SSAC (alternate taxonomies, L2M grading confound, causal language discipline, full paper structure, open repo).
+
 Possible paper title:
 
 > Where NBA Referees Miss: Structural Error Risk in Late-Game Officiating Decisions
@@ -21,7 +25,7 @@ The current dataset is the JSON-era NBA Last Two Minute report archive from 2018
 Key results:
 
 - L2M reports analyzed: 2,514
-- L2M events analyzed: 51,384
+- L2M events analyzed: **51,130** (current modeling / call-context tables)
 - Incorrect decisions: 3,214
 - Baseline event error rate: 6.3%
 - Rolling season holdouts evaluated: 6
@@ -33,16 +37,15 @@ Key results:
 - Ordinary contact challenges: 44.4% of challenge events, 38.0% overturn rate.
 - Timing/count challenges: 0.3% of challenge events despite high L2M risk.
 
-The strongest predictors are event-structure features:
+The strongest predictors are event-structure features (see `results/model_coefficients.csv` for a 2024-25 holdout coefficient dump):
 
 - `Foul: Defense 3 Second`
-- timing/count monitoring
 - `Turnover: Traveling`
-- `Stoppage: Out-of-Bounds`
+- `Stoppage: Out-of-Bounds` and related turnover/boundary families
 - violation family
+- `monitoring_type` MRT buckets (e.g. `ambient_continuous`, `temporal_discrete`)
 - 61-90 second clock bucket
 - non-call vs call
-- possession-boundary monitoring
 
 The fatigue/schedule angle has not shown support so far:
 
@@ -74,6 +77,8 @@ Also avoid claiming individual referees are predictably bad from this sample. Th
   - Context taxonomy and error-rate distribution.
 - `results/post_event_risk_model_report.md`
   - Rolling season holdout post-event risk ranking model.
+- `results/model_coefficients.csv` / `results/model_calibration.csv`
+  - Final-holdout logistic coefficients / odds ratios and binned calibration (written by `post_event_risk_model.py` when 2024-25 test rows exist).
 - `results/post_event_high_risk_events.csv`
   - Highest-risk scored events for inspection.
 - `results/model_baselines_report.md`
@@ -117,25 +122,20 @@ Implementation notes:
 
 ### 2. Freeze A Defensible Taxonomy
 
-Before additional model iteration, define a fixed taxonomy in code and documentation.
+The taxonomy is **frozen in code** (`src/referee_fatigue/taxonomy.py`) and documented in `docs/TAXONOMY.md`.
 
-Recommended top-level categories:
+Current top-level **MRT** categories (stable strings from `classify()`):
 
-- `ordinary_contact_foul`
-  - Shooting, personal, loose-ball, offensive fouls near the primary action.
-- `continuous_off_ball_monitoring`
-  - Defensive three seconds, away-from-play fouls, off-ball screens, loose-ball positioning.
-- `timing_count_judgment`
-  - Three seconds, five seconds, eight seconds, 24 seconds, lane violations.
-- `possession_boundary_adjudication`
-  - Out of bounds, last touch, traveling, stepped out of bounds, backcourt, possession-boundary turnovers.
-- `stoppage_replay_administration`
-  - Inadvertent whistle, timeout/stoppage, replay/support rulings.
+- `focal_discrete` — primary-action contact fouls.
+- `ambient_continuous` — divided-attention / off-ball spatial monitoring (e.g. defensive three seconds, many screens, loose-ball positioning).
+- `temporal_discrete` — clock/count administration intersecting discrete events.
+- `focal_continuous` — boundary/gather/travel/out-of-bounds family requiring sustained spatial tracking.
+- `administrative_process` — replay, timeouts, many technicals, clock/stoppage process.
 
 Why this matters:
 
-- The taxonomy must look pre-specified, not mined after seeing results.
-- The paper should explain why each category is cognitively distinct.
+- Categories are defined by **stated cognitive demand**, not by error rates.
+- A rigorous paper still needs **robustness to alternative groupings** and honest discussion of **L2M grading rules** that differ by call type (conclusive video, bracketed stopwatch plays).
 
 ### 3. Validate By Season
 
@@ -228,8 +228,8 @@ That makes the paper more credible because it shows the analysis rejected the in
    - Referee schedule/travel and pace features as rejected/secondary hypotheses.
 
 3. Taxonomy
-   - Define structural monitoring categories.
-   - Explain cognitive demands: continuous state tracking, divided attention, boundary ambiguity.
+   - Define structural monitoring categories with an explicit **MRT** (focal vs ambient, discrete vs continuous) mapping.
+   - Explain cognitive demands: continuous state tracking, divided attention, boundary ambiguity—without claiming direct cognitive load measurement from L2M labels alone.
 
 4. Descriptive Results
    - Error rates by category.
@@ -256,7 +256,8 @@ That makes the paper more credible because it shows the analysis rejected the in
 8. Limitations
    - L2M selection bias.
    - Not a complete sample of all officiating decisions.
-   - League audit criteria may vary.
+   - League audit criteria may vary; **grading standard differs** for plays requiring conclusive video or technical aids (stopwatch/zoom/bracket language in league guidance).
+   - Challenge merge is descriptive (full-game challenges vs. L2M window); **coach selection** biases overturn rates.
    - Some event context inferred from text.
 
 ## Completed Developer Checklist

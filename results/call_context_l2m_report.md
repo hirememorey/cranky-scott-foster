@@ -21,13 +21,13 @@
 
 ## Structural Taxonomy
 
-| taxonomy_category                | events | incorrect | error_rate |
-| -------------------------------- | ------ | --------- | ---------- |
-| timing_count_judgment            | 1080   | 214       | 19.8%      |
-| possession_boundary_adjudication | 3993   | 644       | 16.1%      |
-| continuous_off_ball_monitoring   | 5907   | 568       | 9.6%       |
-| stoppage_replay_administration   | 329    | 25        | 7.6%       |
-| ordinary_contact_foul            | 39821  | 1763      | 4.4%       |
+| taxonomy_category      | events | incorrect | error_rate |
+| ---------------------- | ------ | --------- | ---------- |
+| temporal_discrete      | 1080   | 214       | 19.8%      |
+| focal_continuous       | 3993   | 644       | 16.1%      |
+| ambient_continuous     | 5907   | 568       | 9.6%       |
+| administrative_process | 505    | 31        | 6.1%       |
+| focal_discrete         | 39645  | 1757      | 4.4%       |
 
 ## Highest-Risk Detailed Call Types
 

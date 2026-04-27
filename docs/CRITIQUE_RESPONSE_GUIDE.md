@@ -1,22 +1,23 @@
 # Critique Response Guide
 
-Use this document to respond to feedback on the public blog draft or Sloan-style paper framing. It translates the strongest critique into claim boundaries, current evidence, and next analyses.
+Use this document to respond to feedback on the public blog draft, Sloan-style paper framing, or **SSAC-style research competition** review. It translates the strongest critique into claim boundaries, current evidence, and next analyses.
 
 ## Current Evidence Snapshot
 
 The defensible JSON-era L2M dataset is `2018-19` through `2024-25`.
 
 - L2M reports: 2,514
-- L2M reviewed events: 51,384
+- L2M reviewed events: **51,130** (aligned with `results/call_context_l2m_report.md` and rolling model tables)
 - Incorrect reviewed decisions: 3,214
-- Baseline reviewed-event error rate: about 6.3%
+- Baseline reviewed-event error rate: about **6.3%**
 
-Structural category error rates from `results/call_context_l2m_report.md`:
+Structural category error rates from `results/call_context_l2m_report.md` (codes from `classify()` in `src/referee_fatigue/taxonomy.py`, **MRT-grounded**; definitions and legacy name pairs in `docs/TAXONOMY.md`):
 
-- `ordinary_contact_foul`: 4.4%
-- `continuous_off_ball_monitoring`: 9.6%
-- `possession_boundary_adjudication`: 16.1%
-- `timing_count_judgment`: 19.8%
+- `focal_discrete` (primary-action contact): **4.4%**
+- `ambient_continuous` (off-ball / spatial monitoring): **9.6%**
+- `focal_continuous` (boundary / gather / travel family): **16.1%**
+- `temporal_discrete` (clock / count): **19.8%**
+- `administrative_process`: **6.1%**
 
 Rolling season holdout from `results/post_event_risk_model_report.md`:
 
@@ -42,13 +43,18 @@ Robustness checks from `results/l2m_robustness_report.md`:
 - Excluding both `Foul: Defense 3 Second` and `Turnover: Traveling`: 2.4x.
 - Excluding raw call types with fewer than 100 events: 3.3x.
 
-Challenge alignment from `results/challenge_alignment_report.md`:
+Challenge alignment from `results/challenge_alignment_report.md` (same MRT codes as L2M; regenerate with `analysis/challenge_alignment.py` after taxonomy or DB changes):
 
-- Challenge events analyzed: 4,519 from `2019-20` through `2024-25`.
-- `2020-21` challenge coverage is partial; cached pages cover 39.4% of expected games.
-- `possession_boundary_adjudication`: 43.4% of challenges, 91.1% overturn rate.
-- `ordinary_contact_foul`: 44.4% of challenges, 38.0% overturn rate.
-- `timing_count_judgment`: 0.3% of challenges despite high L2M risk.
+- Challenge events analyzed: **4,519** from `2019-20` through `2024-25`.
+- `2020-21` challenge coverage is partial; cached pages cover **39.4%** of expected games.
+- **`focal_continuous`** (boundary / gather / last-touch family): **43.4%** of mapped challenges, **91.1%** overturn rate (n=1,963)—high L2M error rate and high replay success when challenged.
+- **`focal_discrete`** (primary-action contact): **44.1%** of mapped challenges, **37.6%** overturn rate (n=1,991)—challenged often, overturned far less often than `focal_continuous`.
+- **`temporal_discrete`** (clock / count): **0.3%** of mapped challenges (n=14), **85.7%** overturn when challenged—rare as a challenge target despite high L2M incorrect rates for that class.
+
+Post-event risk model transparency (run `analysis/post_event_risk_model.py --mode rolling`; final-holdout block trains through `2023-24`, tests `2024-25`):
+
+- `results/model_coefficients.csv` — one-hot feature names, logistic coefficients, odds ratios.
+- `results/model_calibration.csv` — binned mean predicted probability vs. observed incorrect rate on the 2024-25 holdout.
 
 Negative result from `results/l2m_error_workload_report.md` and `results/pace_l2m_error_report.md`:
 
@@ -71,9 +77,9 @@ Partly agree, then update. The project now has secondary challenge evidence, but
 
 What the data supports:
 
-- Possession/boundary decisions are both structurally high-risk in L2M and highly successful challenge targets.
-- Ordinary contact fouls are challenged just as often, but overturn far less often.
-- Timing/count decisions are high-risk in L2M but nearly absent from the challenge sample.
+- **`focal_continuous`** is high incorrect rate in L2M and the strongest mapped full-game challenge target by overturn rate.
+- **`focal_discrete`** is challenged about as often but overturned much less often—consistent with replay being a weaker lever for that class.
+- **`temporal_discrete`** stays high-risk in L2M but almost never appears as a challenge row—league/process and live-visibility story, not a team replay story.
 
 Do not write:
 
@@ -81,7 +87,7 @@ Do not write:
 
 Write:
 
-> Challenge data suggests a split between team-addressable risks, especially possession/boundary replay, and league-addressable risks, especially timing/count and off-ball monitoring.
+> Challenge data suggests a split between team-addressable risks, especially **`focal_continuous`** replay, and league-addressable risks, especially **`temporal_discrete`** and **`ambient_continuous`** (plus anything rarely challengeable).
 
 Also disclose that the challenge sample is full-game, not L2M-only, and `2020-21` coverage is partial.
 
@@ -99,11 +105,11 @@ Avoid implying that ordinary footwork drills are a novel insight or that players
 
 Use direct language for descriptive rates and model validation:
 
-- The data shows timing/count decisions are incorrect about 20% of the time among L2M-reviewed events.
-- The data shows ordinary contact fouls are incorrect about 4% of the time among L2M-reviewed events.
+- The data shows **`temporal_discrete`** (~timing/count) incorrect about **20%** of the time among L2M-reviewed events.
+- The data shows **`focal_discrete`** (~primary-action contact) incorrect about **4%** of the time among L2M-reviewed events.
 - Rolling season holdouts show high-risk events remain elevated out of sample.
 - Robustness checks show the signal weakens but remains above baseline after excluding defensive three seconds and traveling.
-- Challenge data shows possession/boundary rulings are high-overturn challenge targets.
+- Challenge data shows **`focal_continuous`** rulings are the highest-overturn mapped challenge targets (with selection bias noted elsewhere).
 
 Use softer language for applications that have not been directly tested:
 
@@ -113,34 +119,14 @@ Use softer language for applications that have not been directly tested:
 
 ## Suggested Blog Draft Edits
 
-Add one methodology sentence:
+Most of the checklist below is now folded into `docs/ATTENTION_LOAD_BLOG_DRAFT.md` (method stack, null workload results, rolling holdout language, challenge caveats, L2M grading confound, SSAC/paper scope pointer). Use this section as a **checklist** when refreshing the public draft after new runs.
 
-> The model uses call type, structural taxonomy, game clock, period, call vs non-call, and contextual features. The strongest predictors are call structure, not referee workload.
-
-Add one null-result sentence:
-
-> We also tested referee travel miles, back-to-backs, rest days, time-zone crossings, and game pace. None meaningfully predicted error risk in the broad models.
-
-Make the split explicit:
-
-> In the strictest current test, the model is trained on prior seasons and tested on the next season. Across six future-season holdouts, the top-risk decile is 3.5x baseline on average.
-
-Add one concrete archetype:
-
-> A timing/count or possession-boundary event in the last two minutes is several times more likely to be judged incorrect than an ordinary shooting or personal foul in the same reviewed window.
-
-Use current challenge framing:
-
-- Possession/boundary is the strongest team-facing replay opportunity.
-- Timing/count and off-ball monitoring are better framed as league/process-design opportunities.
-- Keep the "attention allocation" theory; it remains the strongest coaching idea.
-
-Expand the league-design section:
-
-- Timing/count: automated or table-supported count/clock tracking.
-- Possession/boundary: faster replay assist for last touch, stepped-out, and possession-control plays.
-- Off-ball monitoring: crew responsibility changes, positioning review, and training modules.
-- Replay policy: targeted support for high-load classes, not universal expansion.
+- Methodology: model family (regularized logistic regression), feature families, and pointer to `results/model_coefficients.csv` / `model_calibration.csv`.
+- Null workload: travel, B2B, rest, time zones, pace.
+- Rolling holdout: six future-season evaluations, ~3.5x mean top-decile lift.
+- Archetype: **`temporal_discrete`** / **`focal_continuous`** vs **`focal_discrete`** in the same reviewed window (plain language: timing/count, boundary/gather, ordinary contact).
+- Challenge framing: **`focal_continuous`** as strongest **mapped** replay opportunity; **`temporal_discrete`** as league/process; **selection bias** caveat explicit.
+- League-design bullets: timing/count automation; possession/boundary replay assist; off-ball crew mechanics/training; targeted replay vs universal expansion.
 
 ## Highest-Value Follow-Up Analysis
 
@@ -187,6 +173,32 @@ Expected claim:
 
 > Among reviewed late-game NBA decisions, errors are not evenly distributed. They concentrate in rule contexts that overload human attention: timing and count judgments, possession and boundary adjudication, and continuous off-ball monitoring. Some of those risks are addressable through team challenge discipline, especially possession/boundary replay, while others require league-side support systems.
 
+## SSAC-Style Competition Review (External Critique)
+
+The following maps a **research competition**–style assessment (novelty, rigor, impact, community interest) to how we answer it **today** vs. what still belongs on a paper roadmap.
+
+### Strengths we lean into
+
+- **Novel angle vs. bias literature:** Reframing from “who do refs favor?” to decision structure / attention design differentiates from home-court, star, and discrimination-focused L2M work.
+- **Actionable prescriptions:** Challenge alignment plus layered league vs. team fixes matches what operations-facing venues reward.
+- **Public data + scale:** Large multi-season L2M sample; SSAC-style venues increasingly expect **open replication**—this repo is the natural home for that requirement.
+- **Temporal validation:** Rolling forward season holdouts and robustness to dropping obvious high-rate call types support “signal not just overfitting” narratives.
+
+### Methodological pushback — how we answer now
+
+| Concern | Response now | Still needed for a finalist-grade paper |
+| -------- | ------------ | ---------------------------------------- |
+| **Taxonomy feels post-hoc / gerrymandered** | Taxonomy is **rule-based**, versioned in code, and now **explicitly tied to MRT** (focal/ambient, discrete/continuous) *before* citing category error rates in `docs/TAXONOMY.md`. | Pre-registration narrative, **alternate groupings** (split-merge sensitivity), optional manual attention labels on a stratified sample. |
+| **Model underspecified** | **Logistic regression** pipeline documented in `analysis/post_event_risk_model.py`; rolling **ROC AUC / average precision** in `results/post_event_risk_model_report.md`; **coefficients + calibration CSVs** for a 2024-25 holdout. | Full coefficient table in paper, formal calibration plots, richer feature ablations in text. |
+| **“Cognitive load” is asserted, not measured** | We describe results as **consistent with** divided-attention / process-design hypotheses; fatigue and pace nulls **narrow** but do not eliminate confounds. | Explicit discussion of rule ambiguity, observability, grading strictness; optional instruments or natural experiments if available. |
+| **L2M grading confound (video / stopwatch / brackets)** | Must be stated in limitations: league criteria for “incorrect” are not neutral across call families. | Dedicated subsection + sensitivity where bracket language appears in source data, if feasible. |
+| **Challenge outcomes ≠ causal replay effectiveness** | Coaches **select** challenges; high overturn on a category mixes **replay clarity** with **selection**. | Denominator on challengeable opportunities; overturn conditional on challenge. |
+| **Blog vs. paper** | Blog draft now points readers here and to `docs/SLOAN_RESEARCH_HANDOFF.md` for paper scope. | Formal IMRAD structure, literature review, citations, robustness appendix. |
+
+### Open-source expectation
+
+Venues such as SSAC ask for repository links supporting the work. Treat this GitHub repo as the canonical place for scripts, regenerated `results/`, and frozen taxonomy—**not** only a narrative PDF.
+
 ## Do Not Claim
 
 - Do not claim the model measures all NBA officiating decisions.
@@ -195,3 +207,4 @@ Expected claim:
 - Do not claim player footwork causes the officiating errors.
 - Do not claim fatigue never matters; say broad fatigue proxies did not explain L2M error risk in this dataset.
 - Do not ignore challenge selection bias; challenge outcomes are chosen by teams and are not a neutral sample of all officiating decisions.
+- Do not equate L2M “incorrect” with raw referee error independent of **league review rules** (conclusive video, bracketed/stopwatch-dependent notes).

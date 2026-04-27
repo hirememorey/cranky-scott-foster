@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 import sys
 
+import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
@@ -45,29 +46,13 @@ def main() -> None:
     conn = connect(PROJECT_ROOT / args.db_path)
     create_referee_tables(conn)
     df = prepare_dataset(load_event_data(conn))
+    
     if args.mode == "rolling":
         rolling_table = rolling_season_evaluation(df)
         pipeline = build_pipeline()
         pipeline.fit(df[FEATURE_COLUMNS], df["incorrect"])
         full_pred = pipeline.predict_proba(df[FEATURE_COLUMNS])[:, 1]
-        if rolling_table.empty:
-            train_df, test_df = split_dataset(df, "random")
-            fallback_pipeline = build_pipeline()
-            fallback_pipeline.fit(train_df[FEATURE_COLUMNS], train_df["incorrect"])
-            test_pred = fallback_pipeline.predict_proba(test_df[FEATURE_COLUMNS])[:, 1]
-            report = build_report(
-                df,
-                train_df,
-                test_df,
-                test_pred,
-                fallback_pipeline,
-                "rolling unavailable; random split fallback",
-            )
-            report += "\n\n## Rolling Season Holdout\n\n"
-            report += rolling_interpretation(rolling_table) + "\n"
-            write_season_holdout_table(rolling_table)
-        else:
-            report = build_rolling_report(df, rolling_table)
+        report = build_rolling_report(df, rolling_table)
     else:
         train_df, test_df = split_dataset(df, args.mode, args.holdout_season)
         pipeline = build_pipeline()
@@ -76,6 +61,50 @@ def main() -> None:
         test_pred = pipeline.predict_proba(test_df[FEATURE_COLUMNS])[:, 1]
         full_pred = pipeline.predict_proba(df[FEATURE_COLUMNS])[:, 1]
         report = build_report(df, train_df, test_df, test_pred, pipeline, args.mode)
+
+    # Final Model Artifacts (Strict Sloan Protocol: Train on 2018-2023, Test on 2024-25)
+    print("\nGenerating final academic artifacts for 2024-25 holdout...")
+    train_final = df[df["season"] != "2024-25"].copy()
+    test_final = df[df["season"] == "2024-25"].copy()
+    
+    if not train_final.empty and not test_final.empty:
+        final_pipeline = build_pipeline()
+        final_pipeline.fit(train_final[FEATURE_COLUMNS], train_final["incorrect"])
+        probs_final = final_pipeline.predict_proba(test_final[FEATURE_COLUMNS])[:, 1]
+        
+        # 1. Feature Importance (Coefficients)
+        preprocessor = final_pipeline.named_steps["preprocess"]
+        model = final_pipeline.named_steps["model"]
+        feature_names = preprocessor.get_feature_names_out()
+        
+        importance_df = pd.DataFrame({
+            "feature": feature_names,
+            "coefficient": model.coef_[0],
+        })
+        importance_df["odds_ratio"] = importance_df["coefficient"].map(lambda x: math.exp(x))
+        importance_df = importance_df.sort_values("coefficient", ascending=False)
+        
+        importance_path = PROJECT_ROOT / "results" / "model_coefficients.csv"
+        importance_df.to_csv(importance_path, index=False)
+        print(f"Wrote {importance_path}")
+
+        # 2. Calibration Curve Data
+        from sklearn.calibration import calibration_curve
+        prob_true, prob_pred = calibration_curve(test_final["incorrect"], probs_final, n_bins=10)
+        calibration_df = pd.DataFrame({
+            "predicted_probability": prob_pred,
+            "observed_proportion": prob_true
+        })
+        calibration_path = PROJECT_ROOT / "results" / "model_calibration.csv"
+        calibration_df.to_csv(calibration_path, index=False)
+        print(f"Wrote {calibration_path}")
+
+        # 3. Decision-Context Table
+        taxonomy_coefs = importance_df[importance_df["feature"].str.contains("monitoring_type")]
+        taxonomy_coefs = taxonomy_coefs.copy()
+        taxonomy_coefs["feature"] = taxonomy_coefs["feature"].str.replace("monitoring_type_", "")
+        print("\n--- Structural Taxonomy Impact (MRT Framework) ---")
+        print(taxonomy_coefs[["feature", "coefficient", "odds_ratio"]].to_string(index=False))
 
     output_path = PROJECT_ROOT / args.output
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -86,7 +115,7 @@ def main() -> None:
     scored.sort_values("predicted_error_probability", ascending=False).head(200).to_csv(
         PROJECT_ROOT / args.predictions, index=False
     )
-    print(f"Wrote {output_path}")
+    print(f"\nWrote {output_path}")
     print(f"Wrote {PROJECT_ROOT / args.predictions}")
 
 
@@ -637,4 +666,3 @@ def dataframe_to_markdown(df: pd.DataFrame) -> str:
 
 if __name__ == "__main__":
     main()
-

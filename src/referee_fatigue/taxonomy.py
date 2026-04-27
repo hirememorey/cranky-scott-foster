@@ -1,8 +1,9 @@
-"""Pre-specified L2M decision-context taxonomy.
+"""Pre-specified L2M decision-context taxonomy based on Multiple Resource Theory (MRT).
 
-The categories in this module are intentionally rule-based. They should be
-changed rarely and with documentation updates because downstream reports treat
-them as the paper's fixed structural taxonomy, not as model-tuned features.
+The categories in this module are defined by their cognitive demand profiles
+(focal vs. ambient monitoring, discrete vs. continuous state tracking) rather 
+than observed error rates. This ensures the taxonomy remains a priori and 
+defensible for academic research.
 """
 
 from __future__ import annotations
@@ -11,11 +12,12 @@ from dataclasses import dataclass
 import re
 
 
-ORDINARY_CONTACT_FOUL = "ordinary_contact_foul"
-CONTINUOUS_OFF_BALL_MONITORING = "continuous_off_ball_monitoring"
-TIMING_COUNT_JUDGMENT = "timing_count_judgment"
-POSSESSION_BOUNDARY_ADJUDICATION = "possession_boundary_adjudication"
-STOPPAGE_REPLAY_ADMINISTRATION = "stoppage_replay_administration"
+# MRT-Grounded Categories
+FOCAL_DISCRETE = "focal_discrete"
+FOCAL_CONTINUOUS = "focal_continuous"
+AMBIENT_CONTINUOUS = "ambient_continuous"
+TEMPORAL_DISCRETE = "temporal_discrete"
+ADMINISTRATIVE_PROCESS = "administrative_process"
 
 
 @dataclass(frozen=True)
@@ -29,74 +31,87 @@ class CategoryDefinition:
 
 
 CATEGORY_DEFINITIONS: dict[str, CategoryDefinition] = {
-    ORDINARY_CONTACT_FOUL: CategoryDefinition(
-        category=ORDINARY_CONTACT_FOUL,
-        label="Ordinary contact foul",
+    FOCAL_DISCRETE: CategoryDefinition(
+        category=FOCAL_DISCRETE,
+        label="Focal/Discrete (Primary Action)",
         rationale=(
-            "Primary-action contact judgments such as shooting, personal, "
-            "offensive, and technical fouls. These require contact evaluation "
-            "but generally not continuous state tracking away from the ball."
+            "Point-in-time judgments occurring at the center of visual focus. "
+            "Includes shooting and personal fouls where the official evaluates "
+            "a specific contact event in the primary action area."
         ),
         examples=("Foul: Shooting", "Foul: Personal", "Foul: Offensive"),
     ),
-    CONTINUOUS_OFF_BALL_MONITORING: CategoryDefinition(
-        category=CONTINUOUS_OFF_BALL_MONITORING,
-        label="Continuous off-ball monitoring",
+    FOCAL_CONTINUOUS: CategoryDefinition(
+        category=FOCAL_CONTINUOUS,
+        label="Focal/Continuous (Boundary/Gather)",
         rationale=(
-            "Judgments that require officials to monitor players or spatial "
-            "relationships away from the immediate ball action over time."
+            "Judgments requiring continuous monitoring of a player's spatial "
+            "relationship to a boundary or the ball. Includes traveling, "
+            "out-of-bounds, and goaltending, which require tracking multiple "
+            "moving points (e.g., pivot foot and ball) simultaneously."
         ),
-        examples=("Foul: Defense 3 Second", "Foul: Away from Play", "Foul: Loose Ball"),
+        examples=("Turnover: Traveling", "Stoppage: Out-of-Bounds", "Violation: Defensive Goaltending"),
     ),
-    TIMING_COUNT_JUDGMENT: CategoryDefinition(
-        category=TIMING_COUNT_JUDGMENT,
-        label="Timing/count judgment",
+    AMBIENT_CONTINUOUS: CategoryDefinition(
+        category=AMBIENT_CONTINUOUS,
+        label="Ambient/Continuous (Off-Ball/Spatial)",
         rationale=(
-            "Rule decisions driven by elapsed time, count state, or clock/lane "
-            "administration rather than ordinary contact."
+            "Judgments requiring 'divided attention' away from the primary "
+            "action. Includes defensive three seconds and off-ball screens, "
+            "where the official must maintain a secondary monitor of player "
+            "positioning within a spatial area over time."
         ),
-        examples=("Turnover: 5 Second Violation", "Turnover: 24 Second Violation", "Violation: Lane"),
+        examples=("Foul: Defense 3 Second", "Foul: Away from Play", "Turnover: Illegal Screen"),
     ),
-    POSSESSION_BOUNDARY_ADJUDICATION: CategoryDefinition(
-        category=POSSESSION_BOUNDARY_ADJUDICATION,
-        label="Possession/boundary adjudication",
+    TEMPORAL_DISCRETE: CategoryDefinition(
+        category=TEMPORAL_DISCRETE,
+        label="Temporal/Discrete (Clock/Count)",
         rationale=(
-            "Boundary, last-touch, possession-control, and movement-rule "
-            "decisions where the key question is who controlled the ball or "
-            "whether a player/ball crossed a legal boundary."
+            "Judgments driven by the intersection of time and a discrete "
+            "event. Includes shot clock, 5/8-second violations, and lane "
+            "violations, where the official must coordinate a mental or "
+            "mechanical count with player movement."
         ),
-        examples=("Stoppage: Out-of-Bounds", "Turnover: Traveling", "Turnover: Backcourt Turnover"),
+        examples=("Turnover: 24 Second Violation", "Turnover: 5 Second Violation", "Violation: Lane"),
     ),
-    STOPPAGE_REPLAY_ADMINISTRATION: CategoryDefinition(
-        category=STOPPAGE_REPLAY_ADMINISTRATION,
-        label="Stoppage/replay administration",
+    ADMINISTRATIVE_PROCESS: CategoryDefinition(
+        category=ADMINISTRATIVE_PROCESS,
+        label="Administrative/Process",
         rationale=(
-            "Administrative stoppages, replay support/overturn rulings, clock "
-            "corrections, timeout administration, and other process decisions."
+            "Non-gameplay decisions including technical fouls, timeouts, "
+            "replay administration, and clock management. These are "
+            "procedural rather than observational in nature."
         ),
-        examples=("Stoppage: Inadvertent Whistle", "Instant Replay: Support Ruling", "Stoppage: Clock"),
+        examples=("Foul: Technical", "Instant Replay: Support Ruling", "Stoppage: TimeOut"),
     ),
 }
 
 
 def classify(call_type: str | None, review_decision: str | None = None) -> str:
-    """Classify an L2M call type into the fixed structural taxonomy."""
-    del review_decision  # Reserved for future pre-specified non-call handling.
+    """Classify an L2M call type into the MRT-grounded taxonomy."""
+    del review_decision
     text = _normalize(call_type)
     if not text or text == "n/a":
-        return STOPPAGE_REPLAY_ADMINISTRATION
+        return ADMINISTRATIVE_PROCESS
 
-    if "defense 3 second" in text or "defensive 3 second" in text:
-        return CONTINUOUS_OFF_BALL_MONITORING
-    if any(token in text for token in _TIMING_TOKENS):
-        return TIMING_COUNT_JUDGMENT
-    if any(token in text for token in _POSSESSION_BOUNDARY_TOKENS):
-        return POSSESSION_BOUNDARY_ADJUDICATION
-    if any(token in text for token in _STOPPAGE_TOKENS):
-        return STOPPAGE_REPLAY_ADMINISTRATION
-    if any(token in text for token in _OFF_BALL_TOKENS):
-        return CONTINUOUS_OFF_BALL_MONITORING
-    return ORDINARY_CONTACT_FOUL
+    # 1. Ambient/Continuous (Highest conflict - off-ball state tracking)
+    if any(token in text for token in _AMBIENT_CONTINUOUS_TOKENS):
+        return AMBIENT_CONTINUOUS
+
+    # 2. Temporal/Discrete (Medium conflict - temporal/event coordination)
+    if any(token in text for token in _TEMPORAL_DISCRETE_TOKENS):
+        return TEMPORAL_DISCRETE
+
+    # 3. Focal/Continuous (Medium conflict - spatial/event tracking)
+    if any(token in text for token in _FOCAL_CONTINUOUS_TOKENS):
+        return FOCAL_CONTINUOUS
+
+    # 4. Administrative/Process (Procedural)
+    if any(token in text for token in _ADMIN_TOKENS):
+        return ADMINISTRATIVE_PROCESS
+
+    # 5. Focal/Discrete (Baseline - primary action contact)
+    return FOCAL_DISCRETE
 
 
 def call_family(value: str | None) -> str:
@@ -121,7 +136,7 @@ def category_labels() -> dict[str, str]:
     }
 
 
-_STOPPAGE_TOKENS = (
+_ADMIN_TOKENS = (
     "stoppage",
     "instant replay",
     "timeout",
@@ -130,10 +145,12 @@ _STOPPAGE_TOKENS = (
     "inadvertent whistle",
     "delay of game",
     "jump ball",
-    "free throw technical",
+    "technical",
+    "flagrant",
+    "clear path",
 )
 
-_TIMING_TOKENS = (
+_TEMPORAL_DISCRETE_TOKENS = (
     "3 second violation",
     "5 second",
     "8 second",
@@ -142,7 +159,7 @@ _TIMING_TOKENS = (
     "lane",
 )
 
-_POSSESSION_BOUNDARY_TOKENS = (
+_FOCAL_CONTINUOUS_TOKENS = (
     "out of bounds",
     "out-of-bounds",
     "stepped out",
@@ -158,7 +175,9 @@ _POSSESSION_BOUNDARY_TOKENS = (
     "goaltending",
 )
 
-_OFF_BALL_TOKENS = (
+_AMBIENT_CONTINUOUS_TOKENS = (
+    "defense 3 second",
+    "defensive 3 second",
     "away from play",
     "loose ball",
     "screen",
@@ -173,3 +192,12 @@ def _normalize(value: str | None) -> str:
     text = re.sub(r"[-_/]+", " ", text)
     text = re.sub(r"\s+", " ", text)
     return text.strip()
+
+
+# Backward-compatible names: same string values as MRT categories above (what `classify` returns).
+ORDINARY_CONTACT_FOUL = FOCAL_DISCRETE
+POSSESSION_BOUNDARY_ADJUDICATION = FOCAL_CONTINUOUS
+CONTINUOUS_OFF_BALL_MONITORING = AMBIENT_CONTINUOUS
+TIMING_COUNT_JUDGMENT = TEMPORAL_DISCRETE
+STOPPAGE_REPLAY_ADMINISTRATION = ADMINISTRATIVE_PROCESS
+

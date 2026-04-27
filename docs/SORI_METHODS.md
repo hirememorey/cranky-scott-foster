@@ -4,7 +4,7 @@ The Structural Officiating Risk Index (SORI) is an event-level score for NBA Las
 
 ## Inputs
 
-The default SORI export uses the frozen taxonomy in `src/referee_fatigue/taxonomy.py`, clock context, and period context. When multi-season validation is available, `analysis/sori_export.py` selects the variant with the strongest rolling-season top-decile lift and refits it on all available L2M events before scoring.
+The default SORI export uses the frozen taxonomy in `src/referee_fatigue/taxonomy.py` (MRT-aligned structural buckets; see `docs/TAXONOMY.md`), clock context, and period context. When multi-season validation is available, `analysis/sori_export.py` selects the variant with the strongest rolling-season top-decile lift and refits it on all available L2M events before scoring.
 
 Optional enriched features are produced by `scripts/compute_l2m_event_context.py`:
 
