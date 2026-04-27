@@ -16,6 +16,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from referee_fatigue.db import connect, create_referee_tables
 from referee_fatigue.game_ids import (
     DEFAULT_SEASONS,
+    generated_regular_season_game_ids,
     load_regular_season_game_ids,
     season_from_game_id,
 )
@@ -34,8 +35,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seasons", nargs="+", default=DEFAULT_SEASONS)
     parser.add_argument("--db-path", default="data/nba_stats.db")
     parser.add_argument("--resilience-path", type=Path)
+    parser.add_argument(
+        "--game-id-source",
+        choices=("auto", "assignments", "game-logs", "generated-range"),
+        default="auto",
+        help="Source for regular-season game IDs.",
+    )
     parser.add_argument("--max-games-per-season", type=int)
     parser.add_argument("--force", action="store_true")
+    parser.add_argument(
+        "--cache-only",
+        action="store_true",
+        help="Read cached NBA page/API responses only; do not make network requests.",
+    )
     return parser.parse_args()
 
 
@@ -52,11 +64,7 @@ def extract_challenge_events(args: argparse.Namespace) -> None:
     conn = connect(PROJECT_ROOT / args.db_path)
     create_referee_tables(conn)
     client = NBAStatsClient(cache_dir=PROJECT_ROOT / "data" / "cache")
-    game_ids_by_season = _game_ids_from_assignments(conn, args.seasons)
-    if not any(game_ids_by_season.values()):
-        game_ids_by_season = load_regular_season_game_ids(
-            args.seasons, PROJECT_ROOT, args.resilience_path
-        )
+    game_ids_by_season = _load_game_ids(conn, args)
 
     total_inserted = 0
     for season, game_ids in game_ids_by_season.items():
@@ -71,9 +79,15 @@ def extract_challenge_events(args: argparse.Namespace) -> None:
                 conn.execute("DELETE FROM challenge_events WHERE game_id = ?", (game_id,))
 
             try:
-                page_props = client.get_nba_game_page_data(game_id)
-                rows = _extract_rows_from_page(conn, game_id, season, page_props)
+                if args.cache_only:
+                    rows = _extract_cached_rows(conn, client, game_id, season)
+                else:
+                    page_props = client.get_nba_game_page_data(game_id)
+                    rows = _extract_rows_from_page(conn, game_id, season, page_props)
             except Exception as page_exc:
+                if args.cache_only:
+                    logger.debug("Game %s skipped in cache-only mode: %s", game_id, page_exc)
+                    continue
                 logger.info("Game %s page parse failed, falling back to Stats API: %s", game_id, page_exc)
                 try:
                     response = client.get_play_by_play(game_id)
@@ -122,6 +136,37 @@ def _game_ids_from_assignments(conn, seasons: list[str]) -> dict[str, list[str]]
     game_ids_by_season = {season: [] for season in seasons}
     for row in rows:
         game_ids_by_season[row["season"]].append(row["game_id"])
+    return game_ids_by_season
+
+
+def _load_game_ids(conn, args: argparse.Namespace) -> dict[str, list[str]]:
+    if args.game_id_source == "assignments":
+        return _game_ids_from_assignments(conn, args.seasons)
+    if args.game_id_source == "game-logs":
+        return load_regular_season_game_ids(
+            args.seasons,
+            PROJECT_ROOT,
+            args.resilience_path,
+        )
+    if args.game_id_source == "generated-range":
+        return {
+            season: generated_regular_season_game_ids(season)
+            for season in args.seasons
+        }
+
+    game_ids_by_season = _game_ids_from_assignments(conn, args.seasons)
+    missing_seasons = [
+        season
+        for season, game_ids in game_ids_by_season.items()
+        if not game_ids
+    ]
+    if missing_seasons:
+        fallback_ids = load_regular_season_game_ids(
+            missing_seasons,
+            PROJECT_ROOT,
+            args.resilience_path,
+        )
+        game_ids_by_season.update(fallback_ids)
     return game_ids_by_season
 
 
@@ -215,6 +260,35 @@ def _extract_rows_from_page(
             }
         )
     return rows
+
+
+def _extract_cached_rows(
+    conn,
+    client: NBAStatsClient,
+    game_id: str,
+    season: str,
+) -> list[dict[str, Any]]:
+    page_cache_path = client._cache_path("nba_game_page", {"GameID": game_id})
+    page_props = client._read_cache(page_cache_path)
+    if page_props is not None:
+        try:
+            return _extract_rows_from_page(conn, game_id, season, page_props)
+        except ValueError:
+            pass
+
+    play_by_play_cache_path = client._cache_path(
+        "playbyplayv2",
+        {
+            "GameID": game_id,
+            "StartPeriod": "1",
+            "EndPeriod": "10",
+        },
+    )
+    response = client._read_cache(play_by_play_cache_path)
+    if response is None:
+        return []
+    events = result_set_to_records(response, "PlayByPlay")
+    return _extract_rows(conn, game_id, season, events)
 
 
 def _event_description(event: dict[str, Any]) -> tuple[str, str | None]:

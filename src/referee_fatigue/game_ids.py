@@ -13,6 +13,14 @@ from pathlib import Path
 
 
 DEFAULT_SEASONS = ["2019-20", "2020-21", "2021-22", "2022-23", "2023-24", "2024-25"]
+EXPECTED_REGULAR_SEASON_GAME_COUNTS = {
+    "2019-20": 1059,
+    "2020-21": 1080,
+    "2021-22": 1230,
+    "2022-23": 1230,
+    "2023-24": 1230,
+    "2024-25": 1230,
+}
 
 
 def default_resilience_path(project_root: Path | None = None) -> Path:
@@ -43,6 +51,15 @@ def season_from_game_id(game_id: str) -> str:
     """Convert an NBA game ID like 0022300001 to 2023-24."""
     start_year = 2000 + int(game_id[3:5])
     return f"{start_year}-{str(start_year + 1)[-2:]}"
+
+
+def generated_regular_season_game_ids(season: str) -> list[str]:
+    """Generate the standard NBA regular-season game ID range for a season."""
+    count = EXPECTED_REGULAR_SEASON_GAME_COUNTS.get(season)
+    if not count:
+        return []
+    season_start = int(season.split("-", 1)[0]) % 100
+    return [f"002{season_start:02d}{game_number:05d}" for game_number in range(1, count + 1)]
 
 
 def _load_ids_for_season(season: str, data_roots: list[Path]) -> list[str]:
