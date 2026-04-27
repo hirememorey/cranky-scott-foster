@@ -1,56 +1,51 @@
-# Cranky Scott Foster
+# The Attention Load: Structural Predictability in NBA Officiating
 
-NBA officiating analytics experiments focused on identifying structural contexts that make late-game referee decisions more error-prone.
+NBA officiating analytics experiments focused on identifying the structural contexts that make late-game referee decisions more error-prone.
 
-## What This Contains
+## Executive Summary: Why NBA Refs Miss Certain Calls
 
-- L2M report collection from NBA official JSON endpoints.
-- Coach challenge extraction from NBA game play-by-play pages.
-- Referee workload features: rest, assignment density, travel miles, and time-zone crossings.
-- Pace/load features from NBA play-by-play and team box-score data.
-- Event-level L2M context analysis and post-event bad-call risk modeling.
-- Challenge-alignment analysis comparing coach challenge behavior with L2M structural risk.
-- Robustness checks for rare call types and major high-risk labels.
+NBA officiating mistakes are not random. They cluster around decisions that ask humans to track too much at once—a phenomenon we call **Attention Load**.
 
-## Current Finding
+We analyzed **51,130** NBA Last Two Minute (L2M) report events from the 2018-19 through 2024-25 seasons. The strongest finding is that officiating "badness" is not broadly driven by referee fatigue, travel, or game pace. Instead, it is **structurally predictable** from the type of decision being made.
 
-The strongest signal is not broad fatigue, travel, or pace. It is **event structure**, summarized in code with a **Wickens-style multiple-resource (MRT) taxonomy** (`docs/TAXONOMY.md`): timing/count–like decisions, boundary/gather–like decisions, off-ball spatial monitoring, vs. primary-action contact.
+### The Findings
+Using a taxonomy grounded in **Wickens’ Multiple Resource Theory (MRT)**, we identified that error rates are significantly higher in categories that require divided attention or continuous state tracking:
 
-The post-event risk model ranks structurally high-risk L2M events well across seasons. In rolling season holdouts from 2018-19 through 2024-25, the top-10% risk bucket shows roughly a **3.5x** lift over baseline on average; see `results/post_event_risk_model_report.md` and **`results/model_coefficients.csv`** / **`results/model_calibration.csv`** for a documented logistic specification on the final season holdout.
+- **Ordinary Contact Fouls** (Primary action): ~4% error.
+- **Continuous Off-Ball Monitoring** (Lane timing, off-ball fouls): ~10% error.
+- **Possession, Boundary, and Gather** (Traveling, Out-of-bounds): ~16% error.
+- **Timing and Count** (Defensive 3s, shot clock): **~20% error.**
 
-Challenge data adds a practical split: possession/boundary-style decisions are heavily challenged and overturned at high rates, while timing/count decisions remain high-risk in L2M but are rarely challenge targets—read with **coach selection** caveats. Robustness checks show the signal weakens after excluding defensive three seconds and traveling, but remains directionally present.
+### The Model: 3.5x Lift
+Our post-event risk model (L2-regularized logistic regression) identifies the highest-risk officiating contexts with significant accuracy. In rolling season holdouts, the top 10% highest-risk events were **3.5 times** more likely to be ruled incorrect than the baseline.
 
-## Research Direction
+| holdout_season | baseline_error_rate | top_10_lift |
+| -------------- | ------------------- | ----------- |
+| 2021-22        | 7.7%                | 3.45x       |
+| 2022-23        | 6.2%                | 3.93x       |
+| 2023-24        | 6.0%                | 3.92x       |
+| 2024-25        | 4.5%                | 4.00x       |
 
-The current best path is an MIT Sloan-style paper on structural officiating risk:
+## Project Status & Methodology
 
-> NBA late-game officiating errors are structurally predictable from decision context. Errors concentrate in timing/count, possession-boundary, and off-ball monitoring decisions rather than being broadly driven by referee fatigue, travel, or game pace.
+**Note:** This is an ongoing evening/weekend research project exploring human factors engineering in professional sports.
 
-Read the next-developer handoff before extending the project:
+### Research Direction
+The goal of this project is to develop a formal framework for **Structural Officiating Risk**. By understanding which calls are neurologically "hardest" for human officials, teams can optimize challenge strategy and the league can design better process supports (e.g., automation for counts, replay-assist for boundaries).
 
-- [`docs/SLOAN_RESEARCH_HANDOFF.md`](docs/SLOAN_RESEARCH_HANDOFF.md)
-- [`docs/CRITIQUE_RESPONSE_GUIDE.md`](docs/CRITIQUE_RESPONSE_GUIDE.md)
+For more in-depth research notes, see:
+- [`docs/FUTURE_RESEARCH_DIRECTIONS.md`](docs/FUTURE_RESEARCH_DIRECTIONS.md)
+- [`docs/MODEL_LIMITATIONS_AND_ROBUSTNESS.md`](docs/MODEL_LIMITATIONS_AND_ROBUSTNESS.md)
+- [`docs/TAXONOMY.md`](docs/TAXONOMY.md)
 
-For a short public-facing draft, see:
-
-- [`docs/ATTENTION_LOAD_BLOG_DRAFT.md`](docs/ATTENTION_LOAD_BLOG_DRAFT.md)
-
-## Reproduce Core Reports
+### Reproduce Results
+This project uses a Python-based pipeline for L2M collection and modeling.
 
 ```bash
+# Core pipeline
 python scripts/collect_l2m_reports.py --all-seasons
-python scripts/compute_referee_load.py
-python scripts/compute_pace_features.py --all-seasons
-python scripts/compute_l2m_event_context.py --all-seasons
-python analysis/call_context_l2m.py
 python analysis/post_event_risk_model.py --mode rolling
-python analysis/model_baselines.py
-python analysis/sori_export.py
-python scripts/extract_challenge_events.py --seasons 2019-20 2020-21 2021-22 2022-23 2023-24 2024-25 --game-id-source game-logs --cache-only
-python scripts/extract_challenge_events.py --seasons 2020-21 --game-id-source generated-range --cache-only
 python analysis/challenge_alignment.py
-python analysis/l2m_robustness_checks.py
 ```
 
 Generated API caches and the local SQLite database are intentionally ignored by git.
-
