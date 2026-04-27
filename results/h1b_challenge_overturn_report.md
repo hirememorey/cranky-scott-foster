@@ -2,33 +2,33 @@
 
 ## Headline
 
-- Challenge events analyzed: **1,636**
-- Baseline overturn rate: **66.1%**
-- Primary model: **Bayesian mixed logit with crew-chief random intercepts**
-- Back-to-back coefficient: **-0.0631**
-- Back-to-back odds ratio: **0.9389**
-- Back-to-back p-value: **0.6197**
+- Challenge events analyzed: **4,294**
+- Baseline overturn rate: **67.3%**
+- Primary model: **pooled logit without crew-chief effects**
+- Back-to-back coefficient: **0.0827**
+- Back-to-back odds ratio: **1.0862**
+- Back-to-back p-value: **0.5277**
 - Decision: **do not scale H1b yet: treat as null/inconclusive and pivot if needed**
 
 ## Back-To-Back Split
 
 | back_to_back | challenges | overturn_rate |
 | ------------ | ---------- | ------------- |
-| 0            | 1508       | 66.0%         |
-| 1            | 128        | 67.2%         |
+| 0            | 3932       | 67.2%         |
+| 1            | 362        | 68.0%         |
 
 ## Days Rest Split
 
 | days_rest_bucket | challenges | overturn_rate |
 | ---------------- | ---------- | ------------- |
-| 1                | 128        | 67.2%         |
-| 2                | 744        | 68.4%         |
-| 3+               | 759        | 63.6%         |
-| unknown          | 5          | 60.0%         |
+| 1                | 362        | 68.0%         |
+| 2                | 1911       | 66.6%         |
+| 3+               | 2007       | 68.0%         |
+| unknown          | 14         | 57.1%         |
 
 ## Model Notes
 
-Statsmodels BinomialBayesMixedGLM estimates the planned (1|crew_chief) random intercept. The p-value is reported from a crew-chief fixed-effects logit because the Bayesian mixed model does not expose frequentist p-values.
+Mixed and fixed-effects models failed, so the fallback pooled logit was used. Last fixed-effects error: Singular matrix
 
 ## Decision Rule
 

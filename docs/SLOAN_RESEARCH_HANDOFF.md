@@ -27,6 +27,11 @@ Key results:
 - Rolling season holdouts evaluated: 6
 - Mean top-10% predicted-risk lift over baseline: about 3.5x
 - 2024-25 holdout: train on 2018-19 through 2023-24, test on 2024-25; top-decile lift about 4.0x
+- Robustness: excluding both `Foul: Defense 3 Second` and `Turnover: Traveling` lowers mean top-decile lift to about 2.4x, but the signal remains above baseline.
+- Challenge alignment: 4,519 coach challenge events from 2019-20 through 2024-25 are mapped to the structural taxonomy; 2020-21 coverage is partial.
+- Possession-boundary challenges: 43.4% of mapped/full challenge events, 91.1% overturn rate.
+- Ordinary contact challenges: 44.4% of challenge events, 38.0% overturn rate.
+- Timing/count challenges: 0.3% of challenge events despite high L2M risk.
 
 The strongest predictors are event-structure features:
 
@@ -51,6 +56,7 @@ Baseline model comparison adds an important nuance:
 - Raw `call_type` is the strongest compact predictor.
 - The frozen structural taxonomy is still valuable for interpretation and paper narrative.
 - The best public claim is not that the five-category taxonomy captures everything, but that high-risk raw call types share attention-load properties: timing/count state, possession/boundary state, and continuous off-ball monitoring.
+- Challenge data supports a practical split: possession/boundary risk is highly replay-addressable for teams, while timing/count and off-ball monitoring look more like league/process-support opportunities.
 
 ## What Not To Overclaim
 
@@ -82,6 +88,12 @@ Also avoid claiming individual referees are predictably bad from this sample. Th
   - Rest/travel/time-zone tests.
 - `results/pace_l2m_error_report.md`
   - Pace and late-game load tests.
+- `results/challenge_alignment_report.md`
+  - Coach challenge behavior by structural category, raw action type, season, and coverage.
+- `results/challenge_coverage_by_season.csv`
+  - Challenge extraction coverage by season; `2020-21` remains partial.
+- `results/l2m_robustness_report.md`
+  - Rolling holdouts after excluding key high-risk labels, rare call types, and structural categories.
 - `results/h1b_challenge_overturn_report.md`
   - Original challenge-overturn fatigue screen.
 - `docs/CRITIQUE_RESPONSE_GUIDE.md`
@@ -162,17 +174,23 @@ Possible outputs:
 
 This gives the paper an applied contribution beyond prediction.
 
-### 5. Study Challenge Alignment
+### 5. Use Challenge Alignment As Secondary Applied Evidence
 
-Questions:
+Current answers:
 
-- Do coach challenges target the same categories the L2M model identifies as structurally high risk?
-- Are high-risk L2M categories under-challenged because they are hard to see live or not challengeable?
-- Are overturned calls concentrated in possession-boundary categories while L2M incorrect non-calls concentrate elsewhere?
+- Possession-boundary plays are both structurally risky in L2M and highly successful challenge targets.
+- Ordinary contact fouls are challenged just as often, but have much lower overturn rates.
+- Timing/count plays are high-risk in L2M but nearly absent from coach challenges.
 
-This can connect L2M review, replay/challenges, and officiating process design.
+Interpretation:
 
-This is now the highest-value next analysis because it directly answers a likely critique of the coaching-edge section: the project has shown structural L2M risk, but has not yet shown that coach challenge behavior is miscalibrated or that high-risk challenge classes overturn more often.
+This connects L2M review, replay/challenges, and officiating process design. It supports a split between team-addressable risks, especially possession/boundary replay, and league-addressable risks, especially timing/count and off-ball monitoring.
+
+Remaining caveat:
+
+- Challenge events are full-game, not L2M-only.
+- `2020-21` challenge coverage is partial in the current cache-backed collection.
+- Challenge share is not denominator-matched to all challengeable opportunities.
 
 ### 6. Add Game Context
 
@@ -226,7 +244,7 @@ That makes the paper more credible because it shows the analysis rejected the in
 6. Robustness
    - Season holdouts.
    - Baselines.
-   - Exclude rare categories.
+   - Exclude rare categories and high-risk labels.
    - Compare with referee/workload variables.
 
 7. Practical Implications
@@ -241,7 +259,7 @@ That makes the paper more credible because it shows the analysis rejected the in
    - League audit criteria may vary.
    - Some event context inferred from text.
 
-## Immediate Developer Checklist
+## Completed Developer Checklist
 
 1. Add multi-season L2M archive discovery.
 2. Freeze taxonomy in a dedicated module, not inside one analysis script.
@@ -249,13 +267,15 @@ That makes the paper more credible because it shows the analysis rejected the in
 4. Produce a season-by-season lift table.
 5. Add simple baselines and compare model variants.
 6. Add a `SORI` score export for all L2M events.
-7. Write a short methods memo describing exactly what the model can and cannot claim.
+7. Run challenge-alignment analysis by structural taxonomy and raw call type.
+8. Add robustness checks excluding `Foul: Defense 3 Second`, `Turnover: Traveling`, rare call types, and structural categories.
+9. Write public/methods guidance describing exactly what the model can and cannot claim.
 
 ## Current Next Developer Checklist
 
-1. Run a challenge-alignment analysis by structural taxonomy and raw call type.
-2. Add robustness checks excluding `Foul: Defense 3 Second`, `Turnover: Traveling`, and rare call types.
-3. Decide whether to parse pre-2018 PDFs or formally define the sample as JSON-era only.
-4. Manually label 100-200 events for attention-load properties to support the conceptual thesis beyond NBA call labels.
-5. Tighten public-facing language using `docs/CRITIQUE_RESPONSE_GUIDE.md`.
+1. Decide whether to parse pre-2018 PDFs or formally define the sample as JSON-era only.
+2. Manually label 100-200 events for attention-load properties to support the conceptual thesis beyond NBA call labels.
+3. Build a challengeability/opportunity denominator: which full-game events were actually challengeable, not just which were challenged.
+4. Improve or explicitly bracket `2020-21` challenge coverage.
+5. Tighten final Sloan paper language around L2M selection bias and full-game challenge selection bias.
 

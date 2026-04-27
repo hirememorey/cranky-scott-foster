@@ -9,6 +9,8 @@ NBA officiating analytics experiments focused on identifying structural contexts
 - Referee workload features: rest, assignment density, travel miles, and time-zone crossings.
 - Pace/load features from NBA play-by-play and team box-score data.
 - Event-level L2M context analysis and post-event bad-call risk modeling.
+- Challenge-alignment analysis comparing coach challenge behavior with L2M structural risk.
+- Robustness checks for rare call types and major high-risk labels.
 
 ## Current Finding
 
@@ -20,6 +22,8 @@ The strongest signal is not broad fatigue, travel, or pace. It is event structur
 - non-calls compared with calls
 
 The post-event risk model ranks structurally high-risk L2M events well across seasons. In rolling season holdouts from 2018-19 through 2024-25, the top-10% risk bucket shows roughly a 3.5x lift over baseline on average.
+
+Challenge data adds a practical split: possession-boundary decisions are heavily challenged and overturned at high rates, while timing/count decisions remain high-risk in L2M but are rarely challenge targets. Robustness checks show the signal weakens after excluding defensive three seconds and traveling, but remains directionally present.
 
 ## Research Direction
 
@@ -47,6 +51,10 @@ python analysis/call_context_l2m.py
 python analysis/post_event_risk_model.py --mode rolling
 python analysis/model_baselines.py
 python analysis/sori_export.py
+python scripts/extract_challenge_events.py --seasons 2019-20 2020-21 2021-22 2022-23 2023-24 2024-25 --game-id-source game-logs --cache-only
+python scripts/extract_challenge_events.py --seasons 2020-21 --game-id-source generated-range --cache-only
+python analysis/challenge_alignment.py
+python analysis/l2m_robustness_checks.py
 ```
 
 Generated API caches and the local SQLite database are intentionally ignored by git.

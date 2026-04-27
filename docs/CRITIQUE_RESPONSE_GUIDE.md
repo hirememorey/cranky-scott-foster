@@ -34,6 +34,22 @@ Baseline comparisons from `results/model_baselines_report.md`:
 - `call_vs_non_call`: 1.1x.
 - baseline error rate: about 1.0x.
 
+Robustness checks from `results/l2m_robustness_report.md`:
+
+- Full-sample mean top-decile lift: 3.5x.
+- Excluding `Foul: Defense 3 Second`: 3.1x.
+- Excluding `Turnover: Traveling`: 2.9x.
+- Excluding both `Foul: Defense 3 Second` and `Turnover: Traveling`: 2.4x.
+- Excluding raw call types with fewer than 100 events: 3.3x.
+
+Challenge alignment from `results/challenge_alignment_report.md`:
+
+- Challenge events analyzed: 4,519 from `2019-20` through `2024-25`.
+- `2020-21` challenge coverage is partial; cached pages cover 39.4% of expected games.
+- `possession_boundary_adjudication`: 43.4% of challenges, 91.1% overturn rate.
+- `ordinary_contact_foul`: 44.4% of challenges, 38.0% overturn rate.
+- `timing_count_judgment`: 0.3% of challenges despite high L2M risk.
+
 Negative result from `results/l2m_error_workload_report.md` and `results/pace_l2m_error_report.md`:
 
 - Travel miles, immediate previous-game miles, time-zone crossings, and back-to-backs do not meaningfully explain L2M error rates in the broad workload models.
@@ -49,21 +65,25 @@ Recommended wording:
 
 > The original 2024-25-only model showed about 4x lift, but the better test is cross-season validation. Training on prior seasons and testing on future seasons, the top-risk decile is 3.5x more likely to be incorrect on average. When trained on `2018-19` through `2023-24` and tested on `2024-25`, the top decile is 4.0x baseline.
 
-### "The coaching challenge section is plausible but not proven"
+### "The coaching challenge section now has evidence, but is still bounded"
 
-Agree. The current project shows that some L2M decision classes are structurally higher risk. It does **not yet** show that coach challenges are miscalibrated or that challenges in those classes are more likely to succeed.
+Partly agree, then update. The project now has secondary challenge evidence, but it should be framed narrowly.
 
-Use hypothesis language until challenge alignment is added:
+What the data supports:
 
-> This could plausibly improve challenge discipline, but the next analysis should test whether current challenges target the same high-risk classes and whether overturn rates track structural risk.
+- Possession/boundary decisions are both structurally high-risk in L2M and highly successful challenge targets.
+- Ordinary contact fouls are challenged just as often, but overturn far less often.
+- Timing/count decisions are high-risk in L2M but nearly absent from the challenge sample.
 
 Do not write:
 
-> Coaches can improve challenge success by using these classes.
+> Coaches can improve challenge success just by using the L2M risk model.
 
 Write:
 
-> Coaches may be able to allocate live review attention more efficiently if challengeable high-risk classes are under-recognized.
+> Challenge data suggests a split between team-addressable risks, especially possession/boundary replay, and league-addressable risks, especially timing/count and off-ball monitoring.
+
+Also disclose that the challenge sample is full-game, not L2M-only, and `2020-21` coverage is partial.
 
 ### "Player behavior and play design claims may overreach"
 
@@ -82,12 +102,14 @@ Use direct language for descriptive rates and model validation:
 - The data shows timing/count decisions are incorrect about 20% of the time among L2M-reviewed events.
 - The data shows ordinary contact fouls are incorrect about 4% of the time among L2M-reviewed events.
 - Rolling season holdouts show high-risk events remain elevated out of sample.
+- Robustness checks show the signal weakens but remains above baseline after excluding defensive three seconds and traveling.
+- Challenge data shows possession/boundary rulings are high-overturn challenge targets.
 
 Use softer language for applications that have not been directly tested:
 
-- Coaches could plausibly use these classes as a review-attention checklist.
+- Teams could use these classes as a review-attention checklist.
 - Targeted replay support may be more efficient than universal replay expansion.
-- Challenge alignment remains an open test.
+- Challengeability and full-game opportunity denominators remain open tests.
 
 ## Suggested Blog Draft Edits
 
@@ -107,11 +129,11 @@ Add one concrete archetype:
 
 > A timing/count or possession-boundary event in the last two minutes is several times more likely to be judged incorrect than an ordinary shooting or personal foul in the same reviewed window.
 
-Soften the coaching section:
+Use current challenge framing:
 
-- Replace "teams can improve challenge discipline" with "teams could test whether a high-risk decision checklist improves challenge discipline."
-- Replace "players are coached to avoid self-inflicted late-game risk" with "teams can emphasize clarity in situations where ambiguity and attention load are highest."
-- Keep the "attention allocation" theory; it is the strongest coaching idea.
+- Possession/boundary is the strongest team-facing replay opportunity.
+- Timing/count and off-ball monitoring are better framed as league/process-design opportunities.
+- Keep the "attention allocation" theory; it remains the strongest coaching idea.
 
 Expand the league-design section:
 
@@ -122,39 +144,23 @@ Expand the league-design section:
 
 ## Highest-Value Follow-Up Analysis
 
-### Challenge Alignment
+### Challengeability And Opportunity Denominators
 
-Purpose: convert the coaching-edge hypothesis into evidence.
+Purpose: move beyond "what was challenged" to "what could have been challenged."
 
 Questions:
 
-- Which structural classes are challenged most often?
-- Which structural classes have the highest overturn rates?
-- Are high-risk L2M classes under-challenged because they are not visible live or not challengeable?
-- Do overturned challenges concentrate in possession/boundary classes while L2M incorrect non-calls concentrate in timing/count or off-ball monitoring?
+- Which full-game actions were challengeable?
+- Within challengeable opportunities, which structural categories are challenged most often?
+- Are possession/boundary challenges high-overturn because teams select only obvious winners, or because the category itself is structurally replay-friendly?
+- Which L2M high-risk classes are not challengeable, only challengeable when called, or practically hard to detect live?
 
 Expected output:
 
-- `results/challenge_alignment_report.md`
-- challenge count by taxonomy category
-- overturn rate by taxonomy category
-- challengeability notes by class
-- comparison against L2M incorrect rate by category
-
-### Rare-Type Robustness
-
-Purpose: defend against "this is just defensive three seconds and traveling."
-
-Tests:
-
-- Exclude `Foul: Defense 3 Second`.
-- Exclude `Turnover: Traveling`.
-- Exclude all call types with fewer than 100 events.
-- Re-run rolling holdouts.
-
-Expected claim:
-
-> The signal weakens but remains directionally present if the result is structural rather than one-call-type driven.
+- challengeability map by taxonomy category and raw call type
+- denominator-matched challenge rates by category
+- overturn rate by category conditional on challengeability
+- explicit league-side vs team-side opportunity split
 
 ### Manual Attention Labels
 
@@ -179,12 +185,13 @@ Expected claim:
 
 ## Recommended Public Thesis
 
-> Among reviewed late-game NBA decisions, errors are not evenly distributed. They concentrate in rule contexts that overload human attention: timing and count judgments, possession and boundary adjudication, and continuous off-ball monitoring. These risks are predictable across seasons, which means coaches and the league can design review attention, training, and replay support around them.
+> Among reviewed late-game NBA decisions, errors are not evenly distributed. They concentrate in rule contexts that overload human attention: timing and count judgments, possession and boundary adjudication, and continuous off-ball monitoring. Some of those risks are addressable through team challenge discipline, especially possession/boundary replay, while others require league-side support systems.
 
 ## Do Not Claim
 
 - Do not claim the model measures all NBA officiating decisions.
 - Do not claim individual referees are predictably bad.
-- Do not claim coaches can already win more challenges from this alone.
+- Do not claim coaches can win more challenges from the L2M model alone.
 - Do not claim player footwork causes the officiating errors.
 - Do not claim fatigue never matters; say broad fatigue proxies did not explain L2M error risk in this dataset.
+- Do not ignore challenge selection bias; challenge outcomes are chosen by teams and are not a neutral sample of all officiating decisions.
