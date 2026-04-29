@@ -98,4 +98,4 @@ The claim is narrower and, hopefully, more useful:
 
 > Among reviewed late-game NBA decisions, some rule contexts are disproportionately likely to be graded incorrect—and that pattern is stable enough across seasons to be useful for process design, challenge strategy, and honest limits on what replay can fix.
 
-For SSAC-style competition, this draft is still a **popular summary**, not a full paper: a submission would need formal literature review, methods detail, robustness to alternate taxonomies, explicit handling of L2M grading rules, and open replication artifacts (see `docs/CRITIQUE_RESPONSE_GUIDE.md` and `docs/SLOAN_RESEARCH_HANDOFF.md`).
+For SSAC-style competition, this draft is still a **popular summary**, not a full paper: a submission would need formal literature review, methods detail, robustness to alternate taxonomies, explicit handling of L2M grading rules, and open replication artifacts (see `docs/MODEL_LIMITATIONS_AND_ROBUSTNESS.md` and `docs/FUTURE_RESEARCH_DIRECTIONS.md`).

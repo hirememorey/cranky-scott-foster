@@ -12,7 +12,7 @@ Working thesis:
 
 The structural buckets are implemented as an **a priori**, **MRT-aligned** taxonomy in `src/referee_fatigue/taxonomy.py` (`focal_discrete`, `focal_continuous`, `ambient_continuous`, `temporal_discrete`, `administrative_process`). See `docs/TAXONOMY.md` for definitions and mapping from legacy report labels.
 
-**SSAC / competition angle:** the idea is competitive as a **novel framing** (design and attention load vs. bias economics) with **practical impact**, but a finalist-level submission still needs the methodological stack called out in `docs/CRITIQUE_RESPONSE_GUIDE.md` § SSAC (alternate taxonomies, L2M grading confound, causal language discipline, full paper structure, open repo).
+**SSAC / competition angle:** the idea is competitive as a **novel framing** (design and attention load vs. bias economics) with **practical impact**, but a finalist-level submission still needs the methodological stack called out in `docs/MODEL_LIMITATIONS_AND_ROBUSTNESS.md` (critique / SSAC sections: alternate taxonomies, L2M grading confound, causal language discipline, full paper structure, open repo).
 
 Possible paper title:
 
@@ -71,6 +71,16 @@ Safer claim:
 
 Also avoid claiming individual referees are predictably bad from this sample. The current signal is primarily decision-context risk, not referee identity.
 
+## Referee assignments and crew pipeline
+
+**Collection.** Crew lists are scraped from public **www.nba.com** game pages (embedded Next.js props). `stats.nba.com` is not used for officials in this workflow. Crew chief is operationalized as the **first official in the page list** (see `scripts/collect_officials.py`). Generic routes such as `/game/{game_id}/play-by-play` sometimes fail for real games; the client retries **team subsite** URLs built from `home_team_id` / `away_team_id` on each L2M row (`src/referee_fatigue/nba_com_team_slug.py`, `NBAStatsClient.get_nba_game_page_data`).
+
+**Coverage.** For distinct L2M games (`l2m_reports.has_report = 1`), assignment QA shows **full trio** rows (exactly one `crew_chief`, `official_2`, `official_3`) aligned with every game in the current database; see `results/l2m_assignment_coverage.md` (from `scripts/report_l2m_assignment_coverage.py`).
+
+**Outputs.** Per-game tenure and trio familiarity features: `results/crew_chief_game_features.csv`; L2M events joined for exploratory tables: `results/crew_chief_pipeline_events.csv`; narrative + diagnostics: `results/crew_chief_pipeline_report.md` (from `analysis/crew_chief_pipeline_analysis.py`). Row counts there include **playoff** L2M events when those games exist in `l2m_reports` and assignments (e.g. **55,490** events vs **51,130** regular-season-only style totals in the core risk-model tables—check each report’s header).
+
+**Next analytical step.** Pre-specify hypotheses for **crew / chief / familiarity × taxonomy** interactions (heterogeneity and descriptive contrasts), not standalone referee quality rankings—consistent with the limitations section.
+
 ## Current Reports
 
 - `results/call_context_l2m_report.md`
@@ -101,8 +111,12 @@ Also avoid claiming individual referees are predictably bad from this sample. Th
   - Rolling holdouts after excluding key high-risk labels, rare call types, and structural categories.
 - `results/h1b_challenge_overturn_report.md`
   - Original challenge-overturn fatigue screen.
-- `docs/CRITIQUE_RESPONSE_GUIDE.md`
-  - Claim boundaries and response guidance for public/Sloan feedback.
+- `results/l2m_assignment_coverage.md`
+  - L2M games vs full referee-assignment trio coverage by season and RS/playoffs.
+- `results/crew_chief_pipeline_report.md`
+  - Crew chief tenure, trio familiarity buckets, and exploratory taxonomy tables (see § Referee assignments and crew pipeline).
+- `docs/MODEL_LIMITATIONS_AND_ROBUSTNESS.md`
+  - Claim boundaries and response guidance for public/Sloan feedback (includes critique / SSAC framing).
 
 ## Best Next Steps
 
@@ -274,9 +288,12 @@ That makes the paper more credible because it shows the analysis rejected the in
 
 ## Current Next Developer Checklist
 
-1. Decide whether to parse pre-2018 PDFs or formally define the sample as JSON-era only.
-2. Manually label 100-200 events for attention-load properties to support the conceptual thesis beyond NBA call labels.
-3. Build a challengeability/opportunity denominator: which full-game events were actually challengeable, not just which were challenged.
-4. Improve or explicitly bracket `2020-21` challenge coverage.
-5. Tighten final Sloan paper language around L2M selection bias and full-game challenge selection bias.
+1. Pre-specify estimands for **crew / experience / trio familiarity × structural taxonomy** (interaction vs additive contrasts; game- or season-level validation)—step 3 of the internal roadmap.
+2. Decide whether to parse pre-2018 PDFs or formally define the sample as JSON-era only.
+3. Manually label 100-200 events for attention-load properties to support the conceptual thesis beyond NBA call labels.
+4. Build a challengeability/opportunity denominator: which full-game events were actually challengeable, not just which were challenged.
+5. Improve or explicitly bracket `2020-21` challenge coverage.
+6. Tighten final Sloan paper language around L2M selection bias and full-game challenge selection bias.
+
+**Recently completed (assignment pipeline):** full L2M-driven officials backfill with HTML-only collection and team-site URL fallbacks; automated `l2m_assignment_coverage` report; refreshed crew game features and pipeline markdown.
 

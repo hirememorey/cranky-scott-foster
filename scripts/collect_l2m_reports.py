@@ -49,6 +49,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-games", type=int)
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--summary-output", default="results/l2m_ingestion_summary.md")
+    parser.add_argument(
+        "--include-playoffs",
+        action="store_true",
+        help="Also ingest playoff L2M games (004...) listed in the season archive page.",
+    )
     return parser.parse_args()
 
 
@@ -74,10 +79,27 @@ def main() -> None:
     regular_season_ids = load_regular_season_game_ids(seasons, PROJECT_ROOT)
     for season in seasons:
         try:
-            game_ids = discover_regular_season_l2m_game_ids(
+            rs_ids = discover_regular_season_l2m_game_ids(
                 season,
                 regular_season_ids=regular_season_ids.get(season) or None,
             )
+            game_ids = rs_ids
+            if args.include_playoffs:
+                playoff_ids = discover_playoff_l2m_game_ids(season)
+                merged: list[str] = []
+                seen: set[str] = set()
+                for gid in rs_ids + playoff_ids:
+                    if gid not in seen:
+                        seen.add(gid)
+                        merged.append(gid)
+                game_ids = merged
+                logger.info(
+                    "Including playoffs for %s: %s RS + %s playoff => %s unique game IDs",
+                    season,
+                    len(rs_ids),
+                    len(playoff_ids),
+                    len(game_ids),
+                )
         except requests.HTTPError as exc:
             failures += 1
             logger.warning("Skipping %s L2M archive: %s", season, exc)
@@ -141,6 +163,42 @@ def discover_regular_season_l2m_game_ids(
     ids = _regular_season_only(ids, regular_season_ids)
     # Preserve archive order but de-duplicate.
     return list(dict.fromkeys(ids))
+
+
+def discover_playoff_l2m_game_ids(season: str) -> list[str]:
+    """Playoff L2M links from the same season archive page (004-prefixed game IDs)."""
+    response = requests.get(
+        ARCHIVE_URLS[season],
+        headers={"User-Agent": "Mozilla/5.0"},
+        timeout=30,
+    )
+    response.raise_for_status()
+    text = response.text
+    section = _playoff_archive_section(text)
+    ids = re.findall(r"L2MReport\.html\?gameId=(\d{10})", section)
+    playoff = [gid for gid in ids if str(gid).startswith("004")]
+    return list(dict.fromkeys(playoff))
+
+
+def _playoff_archive_section(text: str) -> str:
+    """HTML slice between Playoffs header and footer markers."""
+    start_markers = ["NBA Playoffs", "Playoffs"]
+    start = -1
+    for marker in start_markers:
+        idx = text.find(marker)
+        if idx >= 0:
+            start = idx if start < 0 else min(start, idx)
+    if start < 0:
+        return ""
+    end_markers = [
+        "NBA Summer League",
+        "Summer League",
+        "Copyright",
+        "All rights reserved",
+    ]
+    ends = [text.find(marker, start + 1) for marker in end_markers if text.find(marker, start + 1) >= 0]
+    end = min(ends) if ends else len(text)
+    return text[start:end]
 
 
 def _regular_season_archive_section(text: str, season: str) -> str:

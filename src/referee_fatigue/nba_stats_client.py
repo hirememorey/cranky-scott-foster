@@ -16,7 +16,51 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from referee_fatigue.nba_com_team_slug import team_site_urls
+
 logger = logging.getLogger(__name__)
+
+# stats.nba.com: align with swar/nba_api NBAStatsHTTP — avoid Origin / HTML headers on JSON calls.
+_STATS_HEADERS = {
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive",
+    "Pragma": "no-cache",
+    "Referer": "https://www.nba.com/",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-site",
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    ),
+    "x-nba-stats-origin": "stats",
+    "x-nba-stats-token": "true",
+}
+
+# www.nba.com game HTML: document navigation only (do not reuse stats API headers).
+_GAME_PAGE_HEADERS = {
+    "Accept": (
+        "text/html,application/xhtml+xml,application/xml;q=0.9,"
+        "image/avif,image/webp,image/apng,*/*;q=0.8"
+    ),
+    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive",
+    "Pragma": "no-cache",
+    "Referer": "https://www.nba.com/games",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "same-origin",
+    "Upgrade-Insecure-Requests": "1",
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    ),
+}
 
 
 class NBAStatsClient:
@@ -27,81 +71,149 @@ class NBAStatsClient:
         cache_dir: str | Path = "data/cache",
         cache_expiration: timedelta = timedelta(days=30),
         min_request_interval: float = 1.2,
-        timeout: int = 60,
+        stats_timeout: tuple[float, float] = (12.0, 55.0),
+        l2m_timeout: tuple[float, float] = (10.0, 55.0),
+        page_timeout: tuple[float, float] = (10.0, 35.0),
     ) -> None:
         self.base_url = "https://stats.nba.com/stats"
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.cache_expiration = cache_expiration
         self.min_request_interval = min_request_interval
-        self.timeout = timeout
+        self.stats_timeout = stats_timeout
+        self.l2m_timeout = l2m_timeout
+        self.page_timeout = page_timeout
         self.last_request_time = 0.0
 
+        retries = Retry(
+            total=1,
+            backoff_factor=1.2,
+            status_forcelist=(429, 500, 502, 503, 504),
+            allowed_methods=("GET",),
+            respect_retry_after_header=True,
+        )
+        adapter = HTTPAdapter(max_retries=retries)
+
+        # official.nba.com L2M JSON — Referer set per-request in get_l2m_report_json.
         self.session = requests.Session()
         self.session.headers.update(
             {
                 "Accept": "application/json, text/plain, */*",
                 "Accept-Language": "en-US,en;q=0.9",
                 "Connection": "keep-alive",
-                "Origin": "https://www.nba.com",
-                "Referer": "https://www.nba.com/",
-                "User-Agent": (
-                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/140.0.0.0 Safari/537.36"
-                ),
-                "x-nba-stats-origin": "stats",
-                "x-nba-stats-token": "true",
+                "User-Agent": _STATS_HEADERS["User-Agent"],
             }
         )
-
-        retries = Retry(
-            total=5,
-            backoff_factor=2,
-            status_forcelist=(429, 500, 502, 503, 504),
-            allowed_methods=("GET",),
-            respect_retry_after_header=True,
-        )
-        adapter = HTTPAdapter(max_retries=retries)
         self.session.mount("https://", adapter)
         self.session.mount("http://", adapter)
+
+        # stats.nba.com — headers aligned with swar/nba_api (no Origin on JSON).
+        self._stats_session = requests.Session()
+        self._stats_session.headers.update(_STATS_HEADERS)
+        self._stats_session.mount("https://", HTTPAdapter(max_retries=retries))
+        self._stats_session.mount("http://", HTTPAdapter(max_retries=retries))
+
+        # www.nba.com HTML — document navigation only (do not send stats API headers).
+        self._page_session = requests.Session()
+        self._page_session.headers.update(_GAME_PAGE_HEADERS)
+        self._page_session.mount("https://", HTTPAdapter(max_retries=Retry(total=0)))
+        self._page_session.mount("http://", HTTPAdapter(max_retries=Retry(total=0)))
 
     def get_box_score_summary(self, game_id: str) -> dict[str, Any]:
         """Get game metadata, including OfficialsInfo, from boxscoresummaryv2."""
         return self._make_request("boxscoresummaryv2", {"GameID": game_id})
 
-    def get_nba_game_page_data(self, game_id: str) -> dict[str, Any]:
-        """Get embedded page data from nba.com/game/{game_id}/play-by-play."""
+    def get_nba_game_page_data(
+        self,
+        game_id: str,
+        *,
+        page_retries: int = 4,
+        home_team_id: int | None = None,
+        away_team_id: int | None = None,
+    ) -> dict[str, Any]:
+        """Load embedded Next.js props for a game page.
+
+        Tries ``/game/{id}/play-by-play`` first. That route often returns 500 for older games
+        while team subsites still work (e.g. ``/cavaliers/game/{id}/box-score``).
+        """
         cache_path = self._cache_path("nba_game_page", {"GameID": game_id})
         cached = self._read_cache(cache_path)
         if cached is not None:
             return cached
 
-        self._wait()
-        url = f"https://www.nba.com/game/{game_id}/play-by-play"
-        logger.info("Requesting NBA game page %s", url)
-        response = self.session.get(
-            url,
-            headers={
-                "Accept": (
-                    "text/html,application/xhtml+xml,application/xml;q=0.9,"
-                    "image/avif,image/webp,image/apng,*/*;q=0.8"
-                ),
-                "Cache-Control": "no-cache",
-                "Pragma": "no-cache",
-                "Referer": "https://www.nba.com/games",
-                "Sec-Fetch-Dest": "document",
-                "Sec-Fetch-Mode": "navigate",
-                "Sec-Fetch-Site": "same-origin",
-                "Upgrade-Insecure-Requests": "1",
-            },
-            timeout=self.timeout,
-        )
-        response.raise_for_status()
-        data = parse_next_data(response.text)
-        page_props = data.get("props", {}).get("pageProps", {})
-        self._write_cache(cache_path, page_props)
-        return page_props
+        candidates: list[tuple[str, str]] = [
+            (f"https://www.nba.com/game/{game_id}/play-by-play", "generic_pbp"),
+        ]
+        candidates.extend(team_site_urls(game_id, home_team_id, away_team_id))
+
+        for url, tag in candidates:
+            retries = page_retries if tag == "generic_pbp" else max(2, page_retries // 2)
+            props = self._fetch_next_page_props(
+                url=url,
+                tag=tag,
+                game_id=game_id,
+                page_retries=retries,
+            )
+            if props is not None:
+                self._write_cache(cache_path, props)
+                return props
+
+        raise RuntimeError(f"Could not load NBA game page HTML for game_id={game_id}")
+
+    def _fetch_next_page_props(
+        self,
+        *,
+        url: str,
+        tag: str,
+        game_id: str,
+        page_retries: int,
+    ) -> dict[str, Any] | None:
+        transient = {500, 502, 503, 504}
+        for attempt in range(page_retries):
+            self._wait()
+            logger.info("Requesting NBA game page %s [%s]", url, tag)
+            try:
+                response = self._page_session.get(url, timeout=self.page_timeout)
+            except requests.RequestException as exc:
+                logger.warning("NBA game page %s [%s] transport error: %s", game_id, tag, exc)
+                if attempt < page_retries - 1:
+                    time.sleep(min(2.0**attempt, 15.0))
+                    continue
+                return None
+
+            if response.ok:
+                try:
+                    data = parse_next_data(response.text)
+                except (ValueError, json.JSONDecodeError) as exc:
+                    logger.warning("NBA game page %s [%s] __NEXT_DATA__ parse failed: %s", game_id, tag, exc)
+                    return None
+                page_props = data.get("props", {}).get("pageProps", {})
+                logger.info("NBA game %s loaded via %s", game_id, tag)
+                return page_props
+
+            if response.status_code in transient and attempt < page_retries - 1:
+                delay = min(2.0**attempt, 15.0)
+                logger.warning(
+                    "NBA game page %s [%s] HTTP %s; retry in %.1fs (%s/%s)",
+                    game_id,
+                    tag,
+                    response.status_code,
+                    delay,
+                    attempt + 1,
+                    page_retries,
+                )
+                time.sleep(delay)
+                continue
+
+            logger.warning(
+                "NBA game page %s [%s] HTTP %s (moving to next URL if any)",
+                game_id,
+                tag,
+                response.status_code,
+            )
+            return None
+
+        return None
 
     def get_l2m_report_json(self, game_id: str) -> dict[str, Any]:
         """Get official NBA Last Two Minute report JSON for a game."""
@@ -119,7 +231,7 @@ class NBAStatsClient:
                 "Accept": "application/json, text/plain, */*",
                 "Referer": f"https://official.nba.com/l2m/L2MReport.html?gameId={game_id}",
             },
-            timeout=self.timeout,
+            timeout=self.l2m_timeout,
         )
         response.raise_for_status()
         data = response.json()
@@ -148,7 +260,7 @@ class NBAStatsClient:
         self._wait()
         url = f"{self.base_url}/{endpoint}"
         logger.info("Requesting %s params=%s", endpoint, params)
-        response = self.session.get(url, params=params, timeout=self.timeout)
+        response = self._stats_session.get(url, params=params, timeout=self.stats_timeout)
         response.raise_for_status()
         data = response.json()
         self._write_cache(cache_path, data)

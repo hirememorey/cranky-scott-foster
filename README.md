@@ -30,6 +30,11 @@ Our post-event risk model (L2-regularized logistic regression) identifies the hi
 
 **Note:** This is an ongoing evening/weekend research project exploring human factors engineering in professional sports.
 
+### Where things stand
+The main empirical result is unchanged: late-game error risk is **best explained by decision context** (MRT-aligned taxonomy), not broad fatigue, travel, or pace. **Referee assignment rows** are now collected for L2M-backed games from **www.nba.com** embedded game-page data (`__NEXT_DATA__`), not the Stats API. Some older games return HTTP errors on canonical URLs (`/game/{game_id}/…`); the collector falls back to **team subsite** URLs (`/cavaliers/game/{game_id}/…`, etc.) using home/away team IDs stored with each L2M game. Coverage QA and crew exports are documented under [`docs/FUTURE_RESEARCH_DIRECTIONS.md`](docs/FUTURE_RESEARCH_DIRECTIONS.md).
+
+Event counts: the headline **51,130** reviewed L2M events (2018–19 through 2024–25) matches the primary modeling tables (`call_context`, post-event risk model). Analyses that join **playoff** L2M events and assignments use a larger row count (see `results/crew_chief_pipeline_report.md`).
+
 ### Research Direction
 The goal of this project is to develop a formal framework for **Structural Officiating Risk**. By understanding which calls are neurologically "hardest" for human officials, teams can optimize challenge strategy and the league can design better process supports (e.g., automation for counts, replay-assist for boundaries).
 
@@ -46,6 +51,13 @@ This project uses a Python-based pipeline for L2M collection and modeling.
 python scripts/collect_l2m_reports.py --all-seasons
 python analysis/post_event_risk_model.py --mode rolling
 python analysis/challenge_alignment.py
+
+# Referee assignments (HTML game pages; use after L2M rows exist)
+python scripts/collect_officials.py --from-l2m-reports
+
+# L2M ↔ assignment coverage QA + crew / trio features (CSV + markdown reports)
+python scripts/report_l2m_assignment_coverage.py
+python analysis/crew_chief_pipeline_analysis.py
 ```
 
 Generated API caches and the local SQLite database are intentionally ignored by git.

@@ -6,6 +6,8 @@ Use this document to respond to feedback on the public blog draft, Sloan-style p
 
 The defensible JSON-era L2M dataset is `2018-19` through `2024-25`.
 
+- **Referee assignments** (crew lists on each game) are collected from public **www.nba.com** HTML game pages, not `stats.nba.com`. Crew chief in this database is **first official in the scraped list**, which may or may not match the league’s internal crew chief designation—use for grouping and heterogeneity, not “who is a bad referee.”
+
 - L2M reports: 2,514
 - L2M reviewed events: **51,130** (aligned with `results/call_context_l2m_report.md` and rolling model tables)
 - Incorrect reviewed decisions: 3,214
@@ -193,7 +195,7 @@ The following maps a **research competition**–style assessment (novelty, rigor
 | **“Cognitive load” is asserted, not measured** | We describe results as **consistent with** divided-attention / process-design hypotheses; fatigue and pace nulls **narrow** but do not eliminate confounds. | Explicit discussion of rule ambiguity, observability, grading strictness; optional instruments or natural experiments if available. |
 | **L2M grading confound (video / stopwatch / brackets)** | Must be stated in limitations: league criteria for “incorrect” are not neutral across call families. | Dedicated subsection + sensitivity where bracket language appears in source data, if feasible. |
 | **Challenge outcomes ≠ causal replay effectiveness** | Coaches **select** challenges; high overturn on a category mixes **replay clarity** with **selection**. | Denominator on challengeable opportunities; overturn conditional on challenge. |
-| **Blog vs. paper** | Blog draft now points readers here and to `docs/SLOAN_RESEARCH_HANDOFF.md` for paper scope. | Formal IMRAD structure, literature review, citations, robustness appendix. |
+| **Blog vs. paper** | Blog draft now points readers here and to `docs/FUTURE_RESEARCH_DIRECTIONS.md` for paper scope. | Formal IMRAD structure, literature review, citations, robustness appendix. |
 
 ### Open-source expectation
 

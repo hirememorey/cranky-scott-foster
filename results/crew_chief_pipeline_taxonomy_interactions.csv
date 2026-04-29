@@ -1,0 +1,11 @@
+model,term,coefficient,odds_ratio,p_value,events,incorrect
+taxonomy_x_chief_games,C(monitoring_type)[T.temporal_discrete]:chief_games_100,0.8179444748120094,2.2658375612817436,0.035977390833008556,40877,2568
+taxonomy_x_chief_games,C(monitoring_type)[T.ambient_continuous]:chief_games_100,0.7210224029299603,2.0565347433013685,0.054463078990719185,40877,2568
+taxonomy_x_chief_games,chief_games_100,-0.5034983236855107,0.6044125262581788,0.1697456846842741,40877,2568
+taxonomy_x_chief_games,C(monitoring_type)[T.focal_continuous]:chief_games_100,0.512528610925847,1.6695073967766627,0.1705353203338934,40877,2568
+taxonomy_x_chief_games,C(monitoring_type)[T.focal_discrete]:chief_games_100,0.5047013343769581,1.6564907097431647,0.17122760013074745,40877,2568
+taxonomy_x_trio_games,C(monitoring_type)[T.ambient_continuous]:trio_games_5,2.462339851738162,11.732231129985228,0.4945141688882423,40877,2568
+taxonomy_x_trio_games,C(monitoring_type)[T.temporal_discrete]:trio_games_5,0.7991161137451455,2.2235746725574663,0.8302123599052835,40877,2568
+taxonomy_x_trio_games,trio_games_5,-0.7313213592680721,0.481272635698755,0.8358833097328671,40877,2568
+taxonomy_x_trio_games,C(monitoring_type)[T.focal_continuous]:trio_games_5,0.6963345134195928,2.006384835612127,0.847258243231562,40877,2568
+taxonomy_x_trio_games,C(monitoring_type)[T.focal_discrete]:trio_games_5,0.040707351705385364,1.0415472539128818,0.9908847265174683,40877,2568

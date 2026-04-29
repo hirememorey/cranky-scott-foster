@@ -24,6 +24,8 @@ Optional enriched features are produced by `scripts/compute_l2m_event_context.py
 
 SORI ranks L2M-reviewed events by structural error risk. It does not estimate missed calls outside L2M reports, does not measure total referee accuracy, and should not be interpreted as an individual referee quality metric. The core claim is comparative: among reviewed late-game decisions, some structural contexts are more likely to be graded incorrect than others.
 
+Per-game **crew chief / trio familiarity** features (`src/referee_fatigue/crew_features.py`, `analysis/crew_chief_pipeline_analysis.py`) are optional enrichment for heterogeneity analyses; they are not required to reproduce the default SORI CSV exports.
+
 ## Negative-Result Framing
 
 Workload, travel, rest, and pace variables remain useful as contrast tests. Current evidence supports the narrower statement that broad schedule-load variables do not explain late-game error risk nearly as well as decision context in the available data.
